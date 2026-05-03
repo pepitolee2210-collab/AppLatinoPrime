@@ -138,7 +138,7 @@ type AppData = {
   openDocument: (documentId: string) => Promise<string | null>;
   refreshCaseStatus: (caseId: string) => Promise<void>;
   saveFormAnswer: (sessionId: string, questionKey: string, answer: unknown) => Promise<void>;
-  signInWithEmail: (email: string, fullName?: string, intent?: AuthIntent) => Promise<void>;
+  signInWithPassword: (email: string, password: string, fullName?: string, intent?: AuthIntent) => Promise<void>;
   signOut: () => Promise<void>;
   requestPremiumService: (serviceType: PremiumServiceType) => Promise<void>;
   startFormSession: (formCode: string) => Promise<void>;
@@ -403,49 +403,6 @@ async function cachedDocumentObjectUrl(documentId: string): Promise<string | nul
   return URL.createObjectURL(blob);
 }
 
-function cleanAuthUrl() {
-  if (typeof window === "undefined") return;
-
-  const url = new URL(window.location.href);
-  const cleanPath = url.pathname === "/auth/callback" ? "/" : url.pathname;
-  url.hash = "";
-  url.searchParams.delete("code");
-  url.searchParams.delete("type");
-  window.history.replaceState(null, "", `${cleanPath}${url.search}`);
-}
-
-async function consumeAuthRedirect(): Promise<Session | null> {
-  if (!supabase || typeof window === "undefined") return null;
-
-  const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
-  const hashParams = new URLSearchParams(hash);
-  const accessToken = hashParams.get("access_token");
-  const refreshToken = hashParams.get("refresh_token");
-
-  if (accessToken && refreshToken) {
-    const { data, error } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken
-    });
-
-    if (error) throw error;
-    cleanAuthUrl();
-    return data.session;
-  }
-
-  const url = new URL(window.location.href);
-  const code = url.searchParams.get("code");
-
-  if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
-    cleanAuthUrl();
-    return data.session;
-  }
-
-  return null;
-}
-
 export function useAppData(): AppData {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
@@ -476,8 +433,7 @@ export function useAppData(): AppData {
 
     async function initializeAuth() {
       try {
-        const redirectedSession = await consumeAuthRedirect();
-        const { data } = redirectedSession ? { data: { session: redirectedSession } } : await client.auth.getSession();
+        const { data } = await client.auth.getSession();
 
         if (!mounted) return;
         setSession(data.session);
@@ -593,9 +549,15 @@ export function useAppData(): AppData {
     };
   }, [loadLiveData, session]);
 
-  const signInWithEmail = useCallback(async (email: string, fullName?: string, intent: AuthIntent = "signin") => {
+  const signInWithPassword = useCallback(
+    async (email: string, password: string, fullName?: string, intent: AuthIntent = "signin") => {
     if (!supabase) {
       setError("Configura Supabase antes de iniciar sesion.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("La contrasena debe tener al menos 8 caracteres.");
       return;
     }
 
@@ -604,23 +566,61 @@ export function useAppData(): AppData {
     setError(null);
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          data: intent === "signup" ? { full_name: fullName?.trim() || null } : undefined,
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          shouldCreateUser: intent === "signup"
+      if (intent === "signup") {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName?.trim() || null
+            }
+          }
+        });
+
+        if (signUpError) throw signUpError;
+
+        if (signUpData.session) {
+          setSession(signUpData.session);
+          setAuthMessage("Cuenta creada. Ya puedes usar tu panel.");
+          return;
         }
+
+        const { data: signInData, error: signInAfterSignupError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (signInAfterSignupError) {
+          if (signInAfterSignupError.message.toLowerCase().includes("email not confirmed")) {
+            throw new Error("Supabase todavia tiene activa la confirmacion por correo. Desactiva Confirm email para entrar sin enlace.");
+          }
+          throw signInAfterSignupError;
+        }
+
+        if (!signInData.session) throw new Error("No se pudo abrir la sesion despues de crear la cuenta.");
+        setSession(signInData.session);
+        setAuthMessage("Cuenta creada. Ya puedes usar tu panel.");
+        return;
+      }
+
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
 
       if (signInError) throw signInError;
-      setAuthMessage("Te enviamos un enlace seguro. Al abrirlo volveras automaticamente al dashboard.");
+      if (!signInData.session) throw new Error("No se pudo abrir la sesion.");
+
+      setSession(signInData.session);
+      setAuthMessage("Sesion iniciada.");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "No se pudo enviar el enlace.");
+      setError(nextError instanceof Error ? nextError.message : "No se pudo iniciar sesion.");
     } finally {
       setAuthBusy(false);
     }
-  }, []);
+    },
+    []
+  );
 
   const startFormSession = useCallback(async (formCode: string) => {
     if (!supabase) {
@@ -1155,7 +1155,7 @@ export function useAppData(): AppData {
     openDocument,
     refreshCaseStatus,
     saveFormAnswer,
-    signInWithEmail,
+    signInWithPassword,
     signOut,
     requestPremiumService,
     startFormSession,

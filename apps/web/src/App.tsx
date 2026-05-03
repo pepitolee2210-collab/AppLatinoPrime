@@ -180,7 +180,7 @@ export function App() {
           authBusy={appData.authBusy}
           authMessage={appData.authMessage}
           error={appData.error}
-          onSignIn={appData.signInWithEmail}
+          onSignIn={appData.signInWithPassword}
         />
       );
     }
@@ -759,10 +759,13 @@ function AuthScreen({
   authBusy: boolean;
   authMessage: string | null;
   error: string | null;
-  onSignIn: (email: string, fullName?: string, intent?: "signin" | "signup") => Promise<void>;
+  onSignIn: (email: string, password: string, fullName?: string, intent?: "signin" | "signup") => Promise<void>;
 }) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
 
   return (
@@ -775,7 +778,7 @@ function AuthScreen({
           <div>
             <span>Centro de Control Migratorio</span>
             <h1>{authMode === "signup" ? "Crea tu cuenta segura" : "Entra a tu cuenta"}</h1>
-            <p>Usa un enlace privado por correo. No necesitas contrasena para esta prueba.</p>
+            <p>Usa tu correo y contrasena. Sin enlaces de confirmacion.</p>
           </div>
         </div>
 
@@ -806,7 +809,16 @@ function AuthScreen({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void onSignIn(email, fullName, authMode);
+            setLocalError(null);
+            if (password.length < 8) {
+              setLocalError("La contrasena debe tener al menos 8 caracteres.");
+              return;
+            }
+            if (authMode === "signup" && password !== confirmPassword) {
+              setLocalError("Las contrasenas no coinciden.");
+              return;
+            }
+            void onSignIn(email, password, fullName, authMode);
           }}
         >
           {authMode === "signup" ? (
@@ -834,13 +846,39 @@ function AuthScreen({
             type="email"
             value={email}
           />
+          <label htmlFor="password">Contrasena</label>
+          <input
+            autoComplete={authMode === "signup" ? "new-password" : "current-password"}
+            id="password"
+            minLength={8}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Minimo 8 caracteres"
+            required
+            type="password"
+            value={password}
+          />
+          {authMode === "signup" ? (
+            <>
+              <label htmlFor="confirm-password">Confirmar contrasena</label>
+              <input
+                autoComplete="new-password"
+                id="confirm-password"
+                minLength={8}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Repite tu contrasena"
+                required
+                type="password"
+                value={confirmPassword}
+              />
+            </>
+          ) : null}
           <button className="primary-button" disabled={authBusy} type="submit">
             {authBusy ? <Loader2 className="spin" size={16} /> : <LogIn size={16} />}
             {authMode === "signup" ? "Crear acceso seguro" : "Entrar"}
           </button>
         </form>
         {authMessage ? <p className="form-success">{authMessage}</p> : null}
-        {error ? <p className="form-error">{error}</p> : null}
+        {localError || error ? <p className="form-error">{localError ?? error}</p> : null}
       </section>
     </main>
   );
