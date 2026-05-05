@@ -27,9 +27,10 @@ Deno.serve(async (req) => {
 
     const { data: definition, error: definitionError } = await userClient
       .from("form_definitions")
-      .select("id, agency, form_code, review_requirement")
+      .select("id, agency, form_code, review_requirement, official_page_source_id")
       .eq("form_code", formCode)
       .eq("enabled", true)
+      .not("official_page_source_id", "is", null)
       .single();
 
     if (definitionError || !definition) {
@@ -41,6 +42,8 @@ Deno.serve(async (req) => {
       .select("id, edition_label, validation_schema, field_map")
       .eq("form_definition_id", definition.id)
       .eq("status", "active")
+      .not("verified_at", "is", null)
+      .not("instructions_source_id", "is", null)
       .order("effective_from", { ascending: false })
       .limit(1)
       .single();

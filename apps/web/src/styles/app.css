@@ -1214,6 +1214,23 @@ button {
   box-shadow: 0 12px 30px rgb(0 60 87 / 9%);
 }
 
+.dmv-source-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #b8dfe3;
+  border-radius: 8px;
+  color: var(--teal-800);
+  background: #f2fbfb;
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
 .quiz-panel {
   display: grid;
   gap: 11px;

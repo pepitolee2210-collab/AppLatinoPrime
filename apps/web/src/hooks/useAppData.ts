@@ -24,6 +24,7 @@ type CaseRow = Database["public"]["Tables"]["immigration_cases"]["Row"];
 type FormDefinitionRow = Database["public"]["Tables"]["form_definitions"]["Row"];
 type PremiumServiceRow = Database["public"]["Tables"]["premium_services"]["Row"];
 type DmvQuestionRow = Database["public"]["Tables"]["dmv_questions"]["Row"];
+type StateOfficialSourceRow = Database["public"]["Views"]["state_official_source_catalog"]["Row"];
 
 type DataMode = "preview" | "auth_required" | "live";
 type AuthIntent = "signin" | "signup";
@@ -85,6 +86,14 @@ export type DmvPracticeQuestion = {
   topic: string | null;
 };
 
+export type StateOfficialSource = {
+  sourceTitle: string;
+  sourceUrl: string;
+  stateCode: string;
+  stateName: string;
+  verificationStatus: string;
+};
+
 export type FormQuestion = {
   data_type: string;
   display_order: number;
@@ -128,6 +137,7 @@ type AppData = {
   automations: AutomationFlow[];
   cases: CaseSummary[];
   dmvQuestions: DmvPracticeQuestion[];
+  stateOfficialSource: StateOfficialSource | null;
   premiumServices: PremiumService[];
   addCase: (input: AddCaseInput) => Promise<void>;
   addCriticalDate: (input: AddCriticalDateInput) => Promise<void>;
@@ -265,6 +275,18 @@ function mapDmvQuestion(row: DmvQuestionRow): DmvPracticeQuestion | null {
     id: row.id,
     prompt: row.prompt,
     topic: row.topic
+  };
+}
+
+function mapStateOfficialSource(row: StateOfficialSourceRow | null): StateOfficialSource | null {
+  if (!row) return null;
+
+  return {
+    sourceTitle: row.source_title,
+    sourceUrl: row.source_url,
+    stateCode: row.state_code,
+    stateName: row.state_name,
+    verificationStatus: row.verification_status
   };
 }
 
@@ -419,6 +441,7 @@ export function useAppData(): AppData {
   const [automations, setAutomations] = useState<AutomationFlow[]>(automationFlows);
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [dmvQuestions, setDmvQuestions] = useState<DmvPracticeQuestion[]>([]);
+  const [stateOfficialSource, setStateOfficialSource] = useState<StateOfficialSource | null>(null);
   const [premiumServices, setPremiumServices] = useState<PremiumService[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
@@ -494,17 +517,28 @@ export function useAppData(): AppData {
         let liveDmvQuestions: DmvPracticeQuestion[] = [];
 
         const stateCode = liveProfile?.state_code ?? "UT";
-        const { data: dmvSet, error: dmvSetError } = await supabase
-          .from("dmv_question_sets")
-          .select("id")
-          .eq("state_code", stateCode)
-          .eq("language", "es")
-          .eq("active", true)
-          .order("verified_at", { ascending: false, nullsFirst: false })
-          .limit(1)
-          .maybeSingle();
+        const [dmvSetResult, stateSourceResult] = await Promise.all([
+          supabase
+            .from("dmv_question_sets")
+            .select("id")
+            .eq("state_code", stateCode)
+            .eq("language", "es")
+            .eq("active", true)
+            .order("verified_at", { ascending: false, nullsFirst: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("state_official_source_catalog")
+            .select("state_code, state_name, service_area, verification_status, source_title, source_url, verification_url, extracted_at, notes")
+            .eq("state_code", stateCode)
+            .eq("service_area", "dmv")
+            .maybeSingle()
+        ]);
+
+        const { data: dmvSet, error: dmvSetError } = dmvSetResult;
 
         if (dmvSetError) throw dmvSetError;
+        if (stateSourceResult.error) throw stateSourceResult.error;
 
         if (dmvSet?.id) {
           const { data: dmvRows, error: dmvQuestionsError } = await supabase
@@ -524,6 +558,7 @@ export function useAppData(): AppData {
         setDocuments(liveDocuments);
         setCases(liveCases.map(mapCase));
         setDmvQuestions(liveDmvQuestions);
+        setStateOfficialSource(mapStateOfficialSource(stateSourceResult.data ?? null));
         setFolders(buildFolders(liveDocuments));
         setAutomations(liveAutomations.length > 0 ? liveAutomations : automationFlows);
         setPremiumServices(livePremiumServices);
@@ -1112,6 +1147,7 @@ export function useAppData(): AppData {
     setDocuments(recentDocuments);
     setCases([]);
     setDmvQuestions([]);
+    setStateOfficialSource(null);
     setFolders(smartFolders);
     setAutomations(automationFlows);
   }, []);
@@ -1145,6 +1181,7 @@ export function useAppData(): AppData {
     automations,
     cases,
     dmvQuestions,
+    stateOfficialSource,
     premiumServices,
     addCase,
     addCriticalDate,

@@ -282,7 +282,46 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      production_ready_form_catalog: {
+        Row: {
+          id: string;
+          agency: AgencyCode;
+          form_code: string;
+          title: string;
+          description: string;
+          federal: boolean;
+          review_requirement: ReviewRequirement;
+          official_page_source_id: string;
+          official_page_url: string;
+          active_edition_id: string;
+          edition_label: string;
+          effective_from: string | null;
+          pdf_template_path: string | null;
+          official_pdf_url: string | null;
+          instructions_url: string | null;
+          edition_status: string;
+          verified_at: string;
+          mapped_pdf_field_count: number;
+          enabled: boolean;
+        };
+        Relationships: [];
+      };
+      state_official_source_catalog: {
+        Row: {
+          state_code: string;
+          state_name: string;
+          service_area: string;
+          verification_status: string;
+          source_title: string;
+          source_url: string;
+          verification_url: string | null;
+          extracted_at: string | null;
+          notes: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: Record<string, never>;
     Enums: {
       app_role: AppRole;

@@ -14,7 +14,8 @@
     "build": "npm run build -w packages/shared && npm run build -w apps/web && npm run build -w apps/api",
     "typecheck": "npm run typecheck -w packages/shared && npm run typecheck -w apps/web && npm run typecheck -w apps/api",
     "lint": "npm run lint -w apps/web && npm run lint -w apps/api",
-    "db:migrate": "psql \"$DATABASE_URL\" -f database/migrations/001_initial_schema.sql"
+    "db:migrate": "psql \"$DATABASE_URL\" -f database/migrations/001_initial_schema.sql",
+    "sources:sync": "node scripts/sync-official-sources.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",

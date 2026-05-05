@@ -49,6 +49,7 @@ import {
   type CaseSummary,
   type CompleteOnboardingInput,
   type DmvPracticeQuestion,
+  type StateOfficialSource,
   type UploadDocumentInput,
   type UserProfile
 } from "./hooks/useAppData";
@@ -229,7 +230,13 @@ export function App() {
           />
         );
       case "utilities":
-        return <UtilityHub dmvQuestions={appData.dmvQuestions} />;
+        return (
+          <UtilityHub
+            dataMode={appData.mode}
+            dmvQuestions={appData.dmvQuestions}
+            stateOfficialSource={appData.stateOfficialSource}
+          />
+        );
       case "more":
         return (
           <MorePanel
@@ -1398,17 +1405,29 @@ const fallbackUtahDmvQuestions: DmvPracticeQuestion[] = [
   }
 ];
 
-function UtilityHub({ dmvQuestions }: { dmvQuestions: DmvPracticeQuestion[] }) {
-  const questions = dmvQuestions.length > 0 ? dmvQuestions : fallbackUtahDmvQuestions;
+function UtilityHub({
+  dataMode,
+  dmvQuestions,
+  stateOfficialSource
+}: {
+  dataMode: DataMode;
+  dmvQuestions: DmvPracticeQuestion[];
+  stateOfficialSource: StateOfficialSource | null;
+}) {
+  const usePreviewFallback = dataMode !== "live" && dmvQuestions.length === 0;
+  const questions = dmvQuestions.length > 0 ? dmvQuestions : usePreviewFallback ? fallbackUtahDmvQuestions : [];
+  const hasPractice = questions.length > 0;
+  const stateName = stateOfficialSource?.stateName ?? "Utah";
   const [quizStarted, setQuizStarted] = useState(false);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [score, setScore] = useState(0);
-  const currentQuestion = questions[Math.min(questionIndex, questions.length - 1)]!;
+  const currentQuestion = hasPractice ? questions[Math.min(questionIndex, questions.length - 1)]! : null;
   const answered = selectedChoice !== null;
-  const completed = quizStarted && questionIndex >= questions.length;
+  const completed = hasPractice && quizStarted && questionIndex >= questions.length;
 
   const resetQuiz = () => {
+    if (!hasPractice) return;
     setQuizStarted(true);
     setQuestionIndex(0);
     setSelectedChoice(null);
@@ -1416,6 +1435,7 @@ function UtilityHub({ dmvQuestions }: { dmvQuestions: DmvPracticeQuestion[] }) {
   };
 
   const advanceQuiz = () => {
+    if (!currentQuestion) return;
     if (selectedChoice === currentQuestion.answerKey) {
       setScore((current) => current + 1);
     }
@@ -1432,15 +1452,25 @@ function UtilityHub({ dmvQuestions }: { dmvQuestions: DmvPracticeQuestion[] }) {
           <WalletCards size={34} />
         </div>
         <div>
-          <strong>Simulador DMV Utah</strong>
-          <span>Practica para tu examen escrito con preguntas oficiales.</span>
-          <button className="primary-button" onClick={resetQuiz}>
-            Comenzar practica <ChevronRight size={16} />
-          </button>
+          <strong>{hasPractice ? `Simulador DMV ${stateName}` : `Portal oficial DMV ${stateName}`}</strong>
+          <span>
+            {hasPractice
+              ? "Practica para tu examen escrito con preguntas basadas en fuentes oficiales."
+              : "Fuente oficial verificada. El simulador se activa cuando importemos el manual de este estado."}
+          </span>
+          {hasPractice ? (
+            <button className="primary-button" onClick={resetQuiz}>
+              Comenzar practica <ChevronRight size={16} />
+            </button>
+          ) : stateOfficialSource ? (
+            <a className="dmv-source-link" href={stateOfficialSource.sourceUrl} rel="noreferrer" target="_blank">
+              Abrir fuente oficial <ChevronRight size={16} />
+            </a>
+          ) : null}
         </div>
       </section>
 
-      {quizStarted ? (
+      {quizStarted && currentQuestion ? (
         <section className="quiz-panel">
           {completed ? (
             <>
