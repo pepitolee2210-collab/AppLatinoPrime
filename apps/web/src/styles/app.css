@@ -1231,6 +1231,290 @@ button {
   text-decoration: none;
 }
 
+.dmv-source-link.compact {
+  min-height: 32px;
+  margin-top: 0;
+  padding: 0 10px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.utility-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 5px;
+  border: 1px solid #d5e4e9;
+  border-radius: 8px;
+  background: #eef7f8;
+}
+
+.utility-mode-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  border-radius: 7px;
+  color: #526976;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.utility-mode-switch button.active {
+  color: var(--blue-900);
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgb(0 57 82 / 10%);
+}
+
+.dmv-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dmv-meta-grid article {
+  display: grid;
+  gap: 5px;
+  min-height: 92px;
+  padding: 13px;
+  border: 1px solid #d8e6eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.dmv-meta-grid span,
+.dmv-module span,
+.quiz-topic {
+  color: var(--teal-700);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.dmv-meta-grid strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.dmv-meta-grid small,
+.dmv-module small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.dmv-module-list {
+  display: grid;
+  gap: 8px;
+}
+
+.dmv-study-layout {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.82fr) minmax(0, 1.18fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.dmv-module {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid #d8e6eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.dmv-module.selectable {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dmv-module.selectable.selected {
+  border-color: #8cced6;
+  background: #f1fbfb;
+  box-shadow: inset 3px 0 0 var(--teal-700);
+}
+
+.dmv-module strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.dmv-module em {
+  display: block;
+  margin-top: 7px;
+  color: var(--teal-700);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.study-guide-panel {
+  display: grid;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid #cfe2e8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.study-guide-heading {
+  display: grid;
+  gap: 7px;
+}
+
+.study-guide-heading strong {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.12;
+}
+
+.study-guide-heading p,
+.study-answer-notes p {
+  margin: 0;
+  color: #405662;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.study-guide-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(145px, 0.92fr);
+  gap: 12px;
+}
+
+.study-subheading {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--blue-900);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.study-key-points {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.study-key-points li {
+  position: relative;
+  padding-left: 17px;
+  color: #314955;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.42;
+}
+
+.study-key-points li::before {
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal-700);
+  content: "";
+}
+
+.study-answer-notes {
+  display: grid;
+  gap: 7px;
+  align-self: start;
+  padding: 12px;
+  border: 1px solid #d9e9ec;
+  border-radius: 8px;
+  background: #f4fafb;
+}
+
+.study-answer-notes span {
+  color: var(--teal-700);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.study-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.study-return-button {
+  color: var(--teal-700);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.practice-scope-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.practice-scope-row button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #d2e2e7;
+  border-radius: 8px;
+  color: #405662;
+  background: #ffffff;
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.practice-scope-row button.active {
+  border-color: #8cced6;
+  color: var(--blue-900);
+  background: #edf9fa;
+}
+
+.practice-scope-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.practice-scope-row span {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--teal-700);
+  font-size: 10px;
+  font-weight: 950;
+}
+
 .quiz-panel {
   display: grid;
   gap: 11px;
@@ -1238,6 +1522,10 @@ button {
   border: 1px solid #b8dfe3;
   border-radius: 8px;
   background: #f2fbfb;
+}
+
+.quiz-start-panel .primary-button {
+  justify-self: start;
 }
 
 .quiz-heading {
@@ -1258,6 +1546,13 @@ button {
   font-size: 11px;
   font-weight: 850;
   text-decoration: none;
+}
+
+.quiz-topic {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #ffffff;
 }
 
 .quiz-panel p {
@@ -1666,6 +1961,30 @@ button {
   .metric-grid,
   .tool-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dmv-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dmv-card,
+  .dmv-study-layout,
+  .study-guide-body {
+    grid-template-columns: 1fr;
+  }
+
+  .steering-wheel {
+    width: 58px;
+    height: 58px;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .study-guide-heading strong {
+    font-size: 16px;
   }
 
   .automation-card {

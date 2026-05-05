@@ -24,6 +24,8 @@ type CaseRow = Database["public"]["Tables"]["immigration_cases"]["Row"];
 type FormDefinitionRow = Database["public"]["Tables"]["form_definitions"]["Row"];
 type PremiumServiceRow = Database["public"]["Tables"]["premium_services"]["Row"];
 type DmvQuestionRow = Database["public"]["Tables"]["dmv_questions"]["Row"];
+type DmvExamConfigRow = Database["public"]["Tables"]["dmv_exam_configs"]["Row"];
+type DmvLearningModuleRow = Database["public"]["Tables"]["dmv_learning_modules"]["Row"];
 type StateOfficialSourceRow = Database["public"]["Views"]["state_official_source_catalog"]["Row"];
 
 type DataMode = "preview" | "auth_required" | "live";
@@ -80,10 +82,57 @@ export type DmvPracticeQuestion = {
     key: string;
     label: string;
   }>;
+  difficulty: "intro" | "standard" | "hard";
+  displayOrder: number;
   explanation: string | null;
   id: string;
+  moduleKey: string | null;
   prompt: string;
+  questionSetId: string;
+  sourceRef: string | null;
   topic: string | null;
+};
+
+export type DmvExamConfig = {
+  availableLanguages: string[];
+  deliveryModes: string[];
+  examName: string;
+  id: string;
+  licenseType: string;
+  mustCorrectRules: Record<string, unknown>;
+  notes: string | null;
+  openBook: boolean | null;
+  passingScore: number | null;
+  passingScorePercent: number | null;
+  questionCount: number | null;
+  timeLimitMinutes: number | null;
+};
+
+export type DmvLearningModule = {
+  displayOrder: number;
+  id: string;
+  moduleKey: string;
+  summaryEs: string;
+  titleEn: string | null;
+  titleEs: string;
+};
+
+export type DmvAttemptAnswerInput = {
+  correct: boolean;
+  questionId: string;
+  selectedOptionKey: string;
+};
+
+export type RecordDmvAttemptInput = {
+  answers: DmvAttemptAnswerInput[];
+  durationSeconds?: number;
+  examConfigId?: string | null;
+  mode: "practice" | "simulation";
+  passed: boolean;
+  questionSetId?: string | null;
+  scoreCorrect: number;
+  startedAt: string;
+  totalQuestions: number;
 };
 
 export type StateOfficialSource = {
@@ -136,6 +185,8 @@ type AppData = {
   documents: VaultDocument[];
   automations: AutomationFlow[];
   cases: CaseSummary[];
+  dmvExamConfig: DmvExamConfig | null;
+  dmvLearningModules: DmvLearningModule[];
   dmvQuestions: DmvPracticeQuestion[];
   stateOfficialSource: StateOfficialSource | null;
   premiumServices: PremiumService[];
@@ -146,6 +197,7 @@ type AppData = {
   completeOnboarding: (input: CompleteOnboardingInput) => Promise<void>;
   generatePdfPacket: (sessionId: string) => Promise<void>;
   openDocument: (documentId: string) => Promise<string | null>;
+  recordDmvAttempt: (input: RecordDmvAttemptInput) => Promise<void>;
   refreshCaseStatus: (caseId: string) => Promise<void>;
   saveFormAnswer: (sessionId: string, questionKey: string, answer: unknown) => Promise<void>;
   signInWithPassword: (email: string, password: string, fullName?: string, intent?: AuthIntent) => Promise<void>;
@@ -271,10 +323,49 @@ function mapDmvQuestion(row: DmvQuestionRow): DmvPracticeQuestion | null {
   return {
     answerKey: row.correct_option_key,
     choices,
+    difficulty: row.difficulty,
+    displayOrder: row.display_order,
     explanation: row.explanation,
     id: row.id,
+    moduleKey: row.module_key,
     prompt: row.prompt,
+    questionSetId: row.question_set_id,
+    sourceRef: row.source_ref,
     topic: row.topic
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function mapDmvExamConfig(row: DmvExamConfigRow): DmvExamConfig {
+  const rules = isRecord(row.must_correct_rules) ? row.must_correct_rules : {};
+
+  return {
+    availableLanguages: row.available_languages,
+    deliveryModes: row.delivery_modes,
+    examName: row.exam_name,
+    id: row.id,
+    licenseType: row.license_type,
+    mustCorrectRules: rules,
+    notes: row.notes,
+    openBook: row.open_book,
+    passingScore: row.passing_score,
+    passingScorePercent: row.passing_score_percent,
+    questionCount: row.question_count,
+    timeLimitMinutes: row.time_limit_minutes
+  };
+}
+
+function mapDmvLearningModule(row: DmvLearningModuleRow): DmvLearningModule {
+  return {
+    displayOrder: row.display_order,
+    id: row.id,
+    moduleKey: row.module_key,
+    summaryEs: row.summary_es,
+    titleEn: row.title_en,
+    titleEs: row.title_es
   };
 }
 
@@ -440,6 +531,8 @@ export function useAppData(): AppData {
   const [documents, setDocuments] = useState<VaultDocument[]>(recentDocuments);
   const [automations, setAutomations] = useState<AutomationFlow[]>(automationFlows);
   const [cases, setCases] = useState<CaseSummary[]>([]);
+  const [dmvExamConfig, setDmvExamConfig] = useState<DmvExamConfig | null>(null);
+  const [dmvLearningModules, setDmvLearningModules] = useState<DmvLearningModule[]>([]);
   const [dmvQuestions, setDmvQuestions] = useState<DmvPracticeQuestion[]>([]);
   const [stateOfficialSource, setStateOfficialSource] = useState<StateOfficialSource | null>(null);
   const [premiumServices, setPremiumServices] = useState<PremiumService[]>([]);
@@ -517,7 +610,7 @@ export function useAppData(): AppData {
         let liveDmvQuestions: DmvPracticeQuestion[] = [];
 
         const stateCode = liveProfile?.state_code ?? "UT";
-        const [dmvSetResult, stateSourceResult] = await Promise.all([
+        const [dmvSetResult, stateSourceResult, dmvExamConfigsResult, dmvModulesResult] = await Promise.all([
           supabase
             .from("dmv_question_sets")
             .select("id")
@@ -532,20 +625,37 @@ export function useAppData(): AppData {
             .select("state_code, state_name, service_area, verification_status, source_title, source_url, verification_url, extracted_at, notes")
             .eq("state_code", stateCode)
             .eq("service_area", "dmv")
-            .maybeSingle()
+            .maybeSingle(),
+          supabase
+            .from("dmv_exam_configs")
+            .select("*")
+            .eq("state_code", stateCode)
+            .eq("language", "es")
+            .eq("active", true)
+            .order("verified_at", { ascending: false, nullsFirst: false }),
+          supabase
+            .from("dmv_learning_modules")
+            .select("*")
+            .eq("state_code", stateCode)
+            .eq("language", "es")
+            .eq("active", true)
+            .order("display_order", { ascending: true })
         ]);
 
         const { data: dmvSet, error: dmvSetError } = dmvSetResult;
 
         if (dmvSetError) throw dmvSetError;
         if (stateSourceResult.error) throw stateSourceResult.error;
+        if (dmvExamConfigsResult.error) throw dmvExamConfigsResult.error;
+        if (dmvModulesResult.error) throw dmvModulesResult.error;
 
         if (dmvSet?.id) {
           const { data: dmvRows, error: dmvQuestionsError } = await supabase
             .from("dmv_questions")
             .select("*")
             .eq("question_set_id", dmvSet.id)
-            .order("created_at", { ascending: true });
+            .eq("active", true)
+            .order("display_order", { ascending: true });
 
           if (dmvQuestionsError) throw dmvQuestionsError;
           liveDmvQuestions = (dmvRows ?? []).map(mapDmvQuestion).filter(Boolean) as DmvPracticeQuestion[];
@@ -553,10 +663,17 @@ export function useAppData(): AppData {
 
         if (options?.cancelled?.()) return;
 
+        const liveDmvExamConfigs = (dmvExamConfigsResult.data ?? []).map(mapDmvExamConfig);
         setProfile(liveProfile);
         setDashboard(buildDashboard(session.user, liveProfile, liveAlerts, liveDocuments, liveCases));
         setDocuments(liveDocuments);
         setCases(liveCases.map(mapCase));
+        setDmvExamConfig(
+          liveDmvExamConfigs.find((config) => config.licenseType === "standard_operator_never_licensed") ??
+            liveDmvExamConfigs[0] ??
+            null
+        );
+        setDmvLearningModules((dmvModulesResult.data ?? []).map(mapDmvLearningModule));
         setDmvQuestions(liveDmvQuestions);
         setStateOfficialSource(mapStateOfficialSource(stateSourceResult.data ?? null));
         setFolders(buildFolders(liveDocuments));
@@ -818,17 +935,33 @@ export function useAppData(): AppData {
       setPacketMessage(null);
 
       try {
-        const { error: insertError } = await supabase.from("critical_dates").insert({
-          details: input.details?.trim() || null,
-          due_at: localDateToIso(input.dueDate),
-          kind: input.kind,
-          severity: input.severity,
-          source: input.source,
-          title: input.title.trim(),
-          user_id: session.user.id
-        });
+        const { data: insertedDate, error: insertError } = await supabase
+          .from("critical_dates")
+          .insert({
+            details: input.details?.trim() || null,
+            due_at: localDateToIso(input.dueDate),
+            kind: input.kind,
+            severity: input.severity,
+            source: input.source,
+            title: input.title.trim(),
+            user_id: session.user.id
+          })
+          .select("*")
+          .single();
 
         if (insertError) throw insertError;
+
+        if (insertedDate) {
+          const nextAlert = mapCriticalDate(insertedDate);
+          setDashboard((current) => ({
+            ...current,
+            alerts: [nextAlert, ...current.alerts],
+            totals: {
+              ...current.totals,
+              pendingTasks: current.totals.pendingTasks + 1
+            }
+          }));
+        }
 
         setPacketMessage("Fecha critica agregada al semaforo.");
         await loadLiveData();
@@ -853,16 +986,31 @@ export function useAppData(): AppData {
       setPacketMessage(null);
 
       try {
-        const { error: insertError } = await supabase.from("immigration_cases").insert({
-          agency: input.agency,
-          form_code: input.formCode?.trim() || null,
-          receipt_number: input.receiptNumber.trim().toUpperCase().replace(/\s+/g, ""),
-          status: "registered",
-          status_source: "USER",
-          user_id: session.user.id
-        });
+        const { data: insertedCase, error: insertError } = await supabase
+          .from("immigration_cases")
+          .insert({
+            agency: input.agency,
+            form_code: input.formCode?.trim() || null,
+            receipt_number: input.receiptNumber.trim().toUpperCase().replace(/\s+/g, ""),
+            status: "registered",
+            status_source: "USER",
+            user_id: session.user.id
+          })
+          .select("*")
+          .single();
 
         if (insertError) throw insertError;
+
+        if (insertedCase) {
+          setCases((current) => [mapCase(insertedCase), ...current.filter((item) => item.id !== insertedCase.id)]);
+          setDashboard((current) => ({
+            ...current,
+            totals: {
+              ...current.totals,
+              activeCases: current.totals.activeCases + 1
+            }
+          }));
+        }
 
         setPacketMessage("Caso guardado. El monitoreo automatico se activa cuando conectemos credenciales oficiales.");
         await loadLiveData();
@@ -1014,7 +1162,13 @@ export function useAppData(): AppData {
           return;
         }
 
-        if (invokeError) throw invokeError;
+        if (invokeError) {
+          if (invokeError.message.toLowerCase().includes("non-2xx")) {
+            setPacketMessage("Caso guardado. Falta conectar credenciales oficiales USCIS para consulta en tiempo real.");
+            return;
+          }
+          throw invokeError;
+        }
         if (data?.error) throw new Error(data.error);
 
         setPacketMessage(`Estatus USCIS actualizado: ${data.status ?? "recibido"}.`);
@@ -1135,6 +1289,47 @@ export function useAppData(): AppData {
     }
   }, []);
 
+  const recordDmvAttempt = useCallback(
+    async (input: RecordDmvAttemptInput) => {
+      if (!supabase || !session) return;
+
+      const stateCode = profile?.state_code ?? "UT";
+      const completedAt = new Date().toISOString();
+      const { data: attempt, error: attemptError } = await supabase
+        .from("dmv_practice_attempts")
+        .insert({
+          user_id: session.user.id,
+          state_code: stateCode,
+          question_set_id: input.questionSetId ?? null,
+          exam_config_id: input.examConfigId ?? null,
+          mode: input.mode,
+          started_at: input.startedAt,
+          completed_at: completedAt,
+          total_questions: input.totalQuestions,
+          score_correct: input.scoreCorrect,
+          passed: input.passed,
+          duration_seconds: input.durationSeconds ?? null
+        })
+        .select("id")
+        .single();
+
+      if (attemptError) throw attemptError;
+      if (!attempt || input.answers.length === 0) return;
+
+      const { error: answersError } = await supabase.from("dmv_practice_attempt_answers").insert(
+        input.answers.map((answer) => ({
+          attempt_id: attempt.id,
+          question_id: answer.questionId,
+          selected_option_key: answer.selectedOptionKey,
+          correct: answer.correct
+        }))
+      );
+
+      if (answersError) throw answersError;
+    },
+    [profile?.state_code, session]
+  );
+
   const signOut = useCallback(async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -1146,6 +1341,8 @@ export function useAppData(): AppData {
     setDashboard(dashboardSummary);
     setDocuments(recentDocuments);
     setCases([]);
+    setDmvExamConfig(null);
+    setDmvLearningModules([]);
     setDmvQuestions([]);
     setStateOfficialSource(null);
     setFolders(smartFolders);
@@ -1180,6 +1377,8 @@ export function useAppData(): AppData {
     documents,
     automations,
     cases,
+    dmvExamConfig,
+    dmvLearningModules,
     dmvQuestions,
     stateOfficialSource,
     premiumServices,
@@ -1190,6 +1389,7 @@ export function useAppData(): AppData {
     completeOnboarding,
     generatePdfPacket,
     openDocument,
+    recordDmvAttempt,
     refreshCaseStatus,
     saveFormAnswer,
     signInWithPassword,

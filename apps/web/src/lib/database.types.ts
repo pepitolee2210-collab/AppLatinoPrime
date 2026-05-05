@@ -104,6 +104,93 @@ type DmvQuestionInsert = {
   correct_option_key: string;
   explanation?: string | null;
   topic?: string | null;
+  module_key?: string | null;
+  difficulty?: "intro" | "standard" | "hard";
+  source_ref?: string | null;
+  display_order?: number;
+  active?: boolean;
+  created_at?: string;
+};
+
+type DmvHandbookVersionInsert = {
+  id?: string;
+  state_code: string;
+  language?: string;
+  source_id: string;
+  version_label: string;
+  published_at?: string | null;
+  storage_bucket?: string | null;
+  storage_path?: string | null;
+  content_sha256?: string | null;
+  active?: boolean;
+  verified_at?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type DmvExamConfigInsert = {
+  id?: string;
+  state_code: string;
+  license_type?: string;
+  language?: string;
+  exam_name: string;
+  question_count?: number | null;
+  passing_score?: number | null;
+  passing_score_percent?: number | null;
+  time_limit_minutes?: number | null;
+  open_book?: boolean | null;
+  delivery_modes?: string[];
+  available_languages?: string[];
+  must_correct_rules?: Json;
+  official_source_id: string;
+  active?: boolean;
+  verified_at?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type DmvLearningModuleInsert = {
+  id?: string;
+  state_code: string;
+  language?: string;
+  module_key: string;
+  title_es: string;
+  title_en?: string | null;
+  summary_es: string;
+  source_id: string;
+  display_order?: number;
+  active?: boolean;
+  verified_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type DmvPracticeAttemptInsert = {
+  id?: string;
+  user_id: string;
+  state_code: string;
+  question_set_id?: string | null;
+  exam_config_id?: string | null;
+  mode?: "practice" | "simulation";
+  started_at?: string;
+  completed_at?: string | null;
+  total_questions?: number;
+  score_correct?: number;
+  passed?: boolean | null;
+  duration_seconds?: number | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type DmvPracticeAttemptAnswerInsert = {
+  id?: string;
+  attempt_id: string;
+  question_id: string;
+  selected_option_key: string;
+  correct?: boolean;
+  answered_at?: string;
   created_at?: string;
 };
 
@@ -275,10 +362,117 @@ export type Database = {
           correct_option_key: string;
           explanation: string | null;
           topic: string | null;
+          module_key: string | null;
+          difficulty: "intro" | "standard" | "hard";
+          source_ref: string | null;
+          display_order: number;
+          active: boolean;
           created_at: string;
         };
         Insert: DmvQuestionInsert;
         Update: Partial<DmvQuestionInsert>;
+        Relationships: [];
+      };
+      dmv_handbook_versions: {
+        Row: {
+          id: string;
+          state_code: string;
+          language: string;
+          source_id: string;
+          version_label: string;
+          published_at: string | null;
+          storage_bucket: string | null;
+          storage_path: string | null;
+          content_sha256: string | null;
+          active: boolean;
+          verified_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: DmvHandbookVersionInsert;
+        Update: Partial<DmvHandbookVersionInsert>;
+        Relationships: [];
+      };
+      dmv_exam_configs: {
+        Row: {
+          id: string;
+          state_code: string;
+          license_type: string;
+          language: string;
+          exam_name: string;
+          question_count: number | null;
+          passing_score: number | null;
+          passing_score_percent: number | null;
+          time_limit_minutes: number | null;
+          open_book: boolean | null;
+          delivery_modes: string[];
+          available_languages: string[];
+          must_correct_rules: Json;
+          official_source_id: string;
+          active: boolean;
+          verified_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: DmvExamConfigInsert;
+        Update: Partial<DmvExamConfigInsert>;
+        Relationships: [];
+      };
+      dmv_learning_modules: {
+        Row: {
+          id: string;
+          state_code: string;
+          language: string;
+          module_key: string;
+          title_es: string;
+          title_en: string | null;
+          summary_es: string;
+          source_id: string;
+          display_order: number;
+          active: boolean;
+          verified_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: DmvLearningModuleInsert;
+        Update: Partial<DmvLearningModuleInsert>;
+        Relationships: [];
+      };
+      dmv_practice_attempts: {
+        Row: {
+          id: string;
+          user_id: string;
+          state_code: string;
+          question_set_id: string | null;
+          exam_config_id: string | null;
+          mode: "practice" | "simulation";
+          started_at: string;
+          completed_at: string | null;
+          total_questions: number;
+          score_correct: number;
+          passed: boolean | null;
+          duration_seconds: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: DmvPracticeAttemptInsert;
+        Update: Partial<DmvPracticeAttemptInsert>;
+        Relationships: [];
+      };
+      dmv_practice_attempt_answers: {
+        Row: {
+          id: string;
+          attempt_id: string;
+          question_id: string;
+          selected_option_key: string;
+          correct: boolean;
+          answered_at: string;
+          created_at: string;
+        };
+        Insert: DmvPracticeAttemptAnswerInsert;
+        Update: Partial<DmvPracticeAttemptAnswerInsert>;
         Relationships: [];
       };
     };
@@ -318,6 +512,20 @@ export type Database = {
           verification_url: string | null;
           extracted_at: string | null;
           notes: string | null;
+        };
+        Relationships: [];
+      };
+      dmv_state_learning_catalog: {
+        Row: {
+          state_code: string;
+          state_name: string;
+          verification_status: string;
+          notes: string | null;
+          source_title: string;
+          source_url: string;
+          active_question_count: number;
+          modules: Json;
+          exam_configs: Json;
         };
         Relationships: [];
       };

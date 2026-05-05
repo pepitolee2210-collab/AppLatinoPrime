@@ -409,53 +409,77 @@ Deno.serve(async (req) => {
     let signatureRequired = false;
 
     if (canFillOfficialPdf) {
-      const template = await loadOfficialTemplate(
-        serviceClient,
-        edition.pdf_template_path!,
-        edition.official_pdf_source_id
-      );
-      const answerByKey = new Map((answers ?? []).map((item) => [item.question_key, item.answer]));
-      const pdfDoc = await PDFDocument.load(await template.arrayBuffer(), { ignoreEncryption: true });
-      const form = pdfDoc.getForm();
+      try {
+        const template = await loadOfficialTemplate(
+          serviceClient,
+          edition.pdf_template_path!,
+          edition.official_pdf_source_id
+        );
+        const answerByKey = new Map((answers ?? []).map((item) => [item.question_key, item.answer]));
+        const pdfDoc = await PDFDocument.load(await template.arrayBuffer(), { ignoreEncryption: true });
+        const form = pdfDoc.getForm();
 
-      for (const [questionKey, config] of mappedFields) {
-        const pdfFieldName = config.pdf_field;
-        if (!pdfFieldName) continue;
-        const answerKey = config.answer_key ?? questionKey;
+        for (const [questionKey, config] of mappedFields) {
+          const pdfFieldName = config.pdf_field;
+          if (!pdfFieldName) continue;
+          const answerKey = config.answer_key ?? questionKey;
 
-        try {
-          if (config.type === "checkbox") {
-            const field = form.getCheckBox(pdfFieldName);
-            const value = answerByKey.get(answerKey);
-            if (
-              value === true ||
-              value === "true" ||
-              value === "yes" ||
-              (config.checked_value !== undefined && String(value) === config.checked_value)
-            ) {
-              field.check();
-            } else field.uncheck();
-          } else if (config.type === "choice") {
-            const field = form.getDropdown(pdfFieldName);
-            const value = formatAnswer(answerByKey.get(answerKey), config);
-            if (value) field.select(value);
-          } else {
-            const field = form.getTextField(pdfFieldName);
-            field.setText(formatAnswer(answerByKey.get(answerKey), config));
+          try {
+            if (config.type === "checkbox") {
+              const field = form.getCheckBox(pdfFieldName);
+              const value = answerByKey.get(answerKey);
+              if (
+                value === true ||
+                value === "true" ||
+                value === "yes" ||
+                (config.checked_value !== undefined && String(value) === config.checked_value)
+              ) {
+                field.check();
+              } else field.uncheck();
+            } else if (config.type === "choice") {
+              const field = form.getDropdown(pdfFieldName);
+              const value = formatAnswer(answerByKey.get(answerKey), config);
+              if (value) field.select(value);
+            } else {
+              const field = form.getTextField(pdfFieldName);
+              field.setText(formatAnswer(answerByKey.get(answerKey), config));
+            }
+          } catch {
+            warnings.push({ field: pdfFieldName, reason: "pdf_field_not_found" });
           }
-        } catch {
-          warnings.push({ field: pdfFieldName, reason: "pdf_field_not_found" });
         }
-      }
 
-      if (body.flatten !== false) {
-        form.flatten();
-      }
+        if (body.flatten !== false) {
+          form.flatten();
+        }
 
-      pdfBytes = await pdfDoc.save();
-      pageCount = pdfDoc.getPageCount();
-      packetKind = "official_pdf";
-      signatureRequired = true;
+        pdfBytes = await pdfDoc.save();
+        pageCount = pdfDoc.getPageCount();
+        packetKind = "official_pdf";
+        signatureRequired = true;
+      } catch (officialPdfError) {
+        warnings.push({
+          field: "official_pdf",
+          reason:
+            officialPdfError instanceof Error
+              ? `official_pdf_generation_failed: ${officialPdfError.message}`
+              : "official_pdf_generation_failed"
+        });
+
+        const summary = await createSummaryPacketPdf({
+          answers: (answers ?? []) as FormAnswer[],
+          definition: definition as FormDefinition,
+          officialSource,
+          questions: (questions ?? []) as FormQuestion[],
+          reviewRequired: session.legal_review_required === "required",
+          warnings
+        });
+
+        pdfBytes = summary.pdfBytes;
+        pageCount = summary.pageCount;
+        packetKind = "preparation_packet";
+        signatureRequired = false;
+      }
     } else {
       if (session.legal_review_required === "required") {
         warnings.push({ field: "legal_review", reason: "human_review_required_before_submission" });

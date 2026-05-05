@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     const statusUrl = Deno.env.get("USCIS_CASE_STATUS_URL");
 
     if (!clientId || !clientSecret || !tokenUrl || !statusUrl) {
-      return jsonResponse({ error: "uscis_api_not_configured" }, 503);
+      return jsonResponse({ error: "uscis_api_not_configured" });
     }
 
     let receiptNumber = body.receiptNumber?.trim();

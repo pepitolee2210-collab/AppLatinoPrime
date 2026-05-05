@@ -87,8 +87,8 @@ export const automationFlows: AutomationFlow[] = [
   {
     id: "auto-aaf",
     filingType: "ANNUAL_ASYLUM_FEE",
-    title: "Pago Tarifa Anual de Asilo",
-    description: "Prepara alerta, datos y comprobante para pago oficial USCIS.",
+    title: "Pago de Tarifa Anual de Asilo",
+    description: "Prepara datos, alertas y comprobante interno para pagar en USCIS.",
     status: "not_started",
     progress: 0,
     legalReviewRequired: false
@@ -96,8 +96,8 @@ export const automationFlows: AutomationFlow[] = [
   {
     id: "auto-1",
     filingType: "AR11",
-    title: "AR-11 Cambio de direccion",
-    description: "Actualiza tu direccion con USCIS.",
+    title: "AR-11 Cambio de direccion ante USCIS",
+    description: "Prepara el cambio de direccion y lista de verificacion.",
     status: "ready_to_sign",
     progress: 82,
     legalReviewRequired: false
@@ -105,8 +105,8 @@ export const automationFlows: AutomationFlow[] = [
   {
     id: "auto-2",
     filingType: "EOIR33",
-    title: "EOIR-33 Cambio de direccion",
-    description: "Notifica tu direccion a la corte.",
+    title: "EOIR-33 Cambio de direccion en corte",
+    description: "Prepara el aviso de cambio de direccion para EOIR.",
     status: "not_started",
     progress: 0,
     legalReviewRequired: true
@@ -115,7 +115,7 @@ export const automationFlows: AutomationFlow[] = [
     id: "auto-3",
     filingType: "CHANGE_OF_VENUE",
     title: "Mocion para cambio de sede",
-    description: "Prepara un borrador para mover tu audiencia.",
+    description: "Prepara un borrador para solicitar cambio de corte.",
     status: "draft",
     progress: 35,
     legalReviewRequired: true
@@ -123,8 +123,8 @@ export const automationFlows: AutomationFlow[] = [
   {
     id: "auto-4",
     filingType: "I765_RENEWAL",
-    title: "I-765 Renovacion C09",
-    description: "Genera paquete de renovacion de permiso de trabajo.",
+    title: "I-765 Permiso de trabajo",
+    description: "Prepara solicitud, renovacion o reemplazo del permiso.",
     status: "draft",
     progress: 40,
     legalReviewRequired: true

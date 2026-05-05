@@ -19,6 +19,14 @@ Los tramites migratorios principales no cambian por estado. AR-11 e I-765 son US
 
 Los 50 estados quedan registrados en `state_service_catalog` con portal oficial DMV importado desde USAGov. Eso no significa que todos los simuladores DMV esten listos: cada estado debe tener handbook/manual oficial descargado, versionado y convertido a preguntas antes de marcarlo como `questions_ready`.
 
+El motor DMV usa estados de preparacion:
+
+- `source_verified`: portal oficial del estado verificado, sin contenido de estudio importado.
+- `content_imported`: manual/reglas oficiales cargadas, pero sin banco de preguntas listo.
+- `questions_ready`: el estado ya tiene preguntas de practica verificadas y visibles.
+
+Ver tambien `docs/dmv-learning-engine.md`.
+
 ## Descarga y auditoria
 
 El script `npm run sources:sync` descarga cada URL oficial de `official_sources`, sube una copia privada al bucket `official-source-snapshots` y guarda hash SHA-256, estado HTTP, tipo de contenido y ruta en `official_source_snapshots`.

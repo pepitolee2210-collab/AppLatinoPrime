@@ -1,11 +1,14 @@
 import {
   Bell,
+  BookOpen,
   CalendarDays,
   CheckSquare,
   ChevronRight,
+  ClipboardCheck,
   Cloud,
   CreditCard,
   Database,
+  ExternalLink,
   FileCheck2,
   FileText,
   Folder,
@@ -25,7 +28,8 @@ import {
   Sparkles,
   UserRound,
   WalletCards,
-  Zap
+  Zap,
+  ListChecks
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type {
@@ -48,7 +52,11 @@ import {
   type AddCriticalDateInput,
   type CaseSummary,
   type CompleteOnboardingInput,
+  type DmvAttemptAnswerInput,
+  type DmvExamConfig,
+  type DmvLearningModule,
   type DmvPracticeQuestion,
+  type RecordDmvAttemptInput,
   type StateOfficialSource,
   type UploadDocumentInput,
   type UserProfile
@@ -233,7 +241,10 @@ export function App() {
         return (
           <UtilityHub
             dataMode={appData.mode}
+            dmvExamConfig={appData.dmvExamConfig}
+            dmvLearningModules={appData.dmvLearningModules}
             dmvQuestions={appData.dmvQuestions}
+            onRecordDmvAttempt={appData.recordDmvAttempt}
             stateOfficialSource={appData.stateOfficialSource}
           />
         );
@@ -665,7 +676,18 @@ function CriticalDateForm({
       </label>
       <label htmlFor="date-due">
         Fecha
-        <input id="date-due" onChange={(event) => setDueDate(event.target.value)} required type="date" value={dueDate} />
+        <input
+          id="date-due"
+          inputMode="numeric"
+          maxLength={10}
+          onChange={(event) => setDueDate(event.target.value)}
+          pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+          placeholder="AAAA-MM-DD"
+          required
+          title="Usa el formato AAAA-MM-DD"
+          type="text"
+          value={dueDate}
+        />
       </label>
       <label htmlFor="date-kind">
         Tipo
@@ -1212,6 +1234,11 @@ function FormWorkflowPanel({
           const id = `${activeWorkflow.sessionId}-${question.question_key}`;
           const isBoolean = question.data_type === "boolean";
           const isSelect = question.data_type === "select";
+          const placeholder =
+            question.data_type === "date"
+              ? "AAAA-MM-DD"
+              : question.help_text_es ?? "";
+
           return (
             <label className={isBoolean ? "workflow-check" : "workflow-field"} htmlFor={id} key={question.question_key}>
               <span>
@@ -1246,11 +1273,15 @@ function FormWorkflowPanel({
               ) : (
                 <input
                   id={id}
+                  inputMode={question.data_type === "date" ? "numeric" : undefined}
+                  maxLength={question.data_type === "date" ? 10 : undefined}
                   onChange={(event) => {
                     setAnswers((current) => ({ ...current, [question.question_key]: event.target.value }));
                   }}
-                  placeholder={question.help_text_es ?? ""}
-                  type={question.data_type === "date" ? "date" : "text"}
+                  pattern={question.data_type === "date" ? "[0-9]{4}-[0-9]{2}-[0-9]{2}" : undefined}
+                  placeholder={placeholder}
+                  title={question.data_type === "date" ? "Usa el formato AAAA-MM-DD" : undefined}
+                  type="text"
                   value={String(answers[question.question_key] ?? "")}
                 />
               )}
@@ -1342,6 +1373,126 @@ function AutomationCard({ disabled, flow, onStart }: { disabled: boolean; flow: 
   );
 }
 
+const UTAH_DLD_WRITTEN_TEST_URL = "https://dld.utah.gov/written-knowledge-test/";
+const UTAH_DLD_PRACTICE_TEST_URL = "https://dld.utah.gov/practice-test/";
+const UTAH_DLD_HANDBOOK_ES_URL = "https://dld.utah.gov/wp-content/uploads/MANUAL-DEL-CONDUCTOR-DE-UTAH-2024.pdf";
+
+type DmvStudyGuide = {
+  answerStrategy: string;
+  commonMistake: string;
+  keyPoints: string[];
+  objective: string;
+  sourceLabel: string;
+  sourceUrl: string;
+};
+
+const utahStudyGuides: Record<string, DmvStudyGuide> = {
+  "alcohol-drugs": {
+    answerStrategy:
+      "Cuando una opcion minimiza el efecto de alcohol, drogas o medicinas, descartala. La respuesta segura siempre evita manejar afectado.",
+    commonMistake: "Creer que solo el alcohol ilegal cuenta. El manual tambien incluye drogas ilegales, medicamentos recetados y de venta libre.",
+    keyPoints: [
+      "El alcohol y las drogas reducen juicio, vision, reflejos, estado de alerta y tiempo de reaccion.",
+      "El deterioro comienza con el primer trago; Utah recomienda no conducir si consumiste alcohol u otras drogas.",
+      "Utah aplica limite legal de 0.05 BAC para conductores no comerciales, y tambien sanciona si no es seguro operar el vehiculo.",
+      "Para menores de 21 anos, las reglas oficiales son mas estrictas y pueden negar privilegios de conducir."
+    ],
+    objective: "Identificar respuestas donde el conductor elimina el riesgo antes de manejar.",
+    sourceLabel: "Manual del Conductor de Utah, Alcohol/Drogas y Conduccion",
+    sourceUrl: UTAH_DLD_HANDBOOK_ES_URL
+  },
+  "night-driving": {
+    answerStrategy:
+      "Busca la opcion que aumenta visibilidad sin afectar a otros conductores: bajar luces altas, reducir velocidad y anticipar fatiga.",
+    commonMistake: "Pensar que las luces altas se mantienen encendidas siempre que la carretera este oscura.",
+    keyPoints: [
+      "Las luces altas deben bajarse cuando hay trafico cercano para evitar encandilar.",
+      "De noche se reduce la visibilidad; conviene bajar velocidad y ampliar distancia de seguimiento.",
+      "La fatiga y la poca visibilidad son riesgos de conduccion que el manual separa como desafios reales.",
+      "En condiciones dificiles, la velocidad segura puede ser menor que el limite publicado."
+    ],
+    objective: "Responder como conductor defensivo cuando la visibilidad baja.",
+    sourceLabel: "Manual del Conductor de Utah, Conduccion nocturna",
+    sourceUrl: UTAH_DLD_HANDBOOK_ES_URL
+  },
+  "right-of-way": {
+    answerStrategy:
+      "Si una respuesta protege peatones, emergencia o trafico con derecho de paso, normalmente es la correcta.",
+    commonMistake: "Confundir ceder el paso con detenerse solo cuando otro vehiculo ya esta encima.",
+    keyPoints: [
+      "Ante vehiculos de emergencia con sirena o luces, debes ceder, moverte al lado derecho y detenerte hasta que pasen.",
+      "La ley move over exige reducir velocidad, dar espacio y cambiar de carril si es seguro ante vehiculos detenidos con luces.",
+      "Debes ceder a peatones que entran o estan en un cruce peatonal, incluso si no esta marcado.",
+      "Si los semaforos no funcionan, primero debes detenerte por completo y ceder segun corresponda."
+    ],
+    objective: "Practicar decisiones donde otra persona o vehiculo tiene prioridad legal.",
+    sourceLabel: "Manual del Conductor de Utah, Derecho de paso y vehiculos de emergencia",
+    sourceUrl: UTAH_DLD_HANDBOOK_ES_URL
+  },
+  signals: {
+    answerStrategy:
+      "Traduce cada color a accion: rojo detiene, amarillo prepara, verde permite solo si el camino esta despejado.",
+    commonMistake: "Leer verde como permiso absoluto. El manual exige precaucion y camino despejado.",
+    keyPoints: [
+      "Semaforo verde: puedes avanzar con precaucion si el camino esta despejado.",
+      "Semaforo amarillo: la luz esta por cambiar a rojo.",
+      "Amarillo intermitente: reduce velocidad, procede con cautela y preparate para detenerte.",
+      "Rojo: detente antes de entrar a la interseccion, linea de detencion o cruce peatonal."
+    ],
+    objective: "Reconocer la accion correcta ante luces, flechas y senales.",
+    sourceLabel: "Manual del Conductor de Utah, Semaforos y senales",
+    sourceUrl: UTAH_DLD_HANDBOOK_ES_URL
+  },
+  speed: {
+    answerStrategy:
+      "Primero revisa si hay senal. Si no hay, aplica los limites basicos y luego reduce por clima, visibilidad, trafico o peligro.",
+    commonMistake: "Memorizar el numero y olvidar la regla basica: nunca manejar mas rapido de lo razonablemente seguro.",
+    keyPoints: [
+      "20 mph al pasar por escuela durante recreo, entrada/salida o cuando las luces intermitentes funcionan.",
+      "25 mph en areas comerciales o residenciales sin senal.",
+      "55 mph en autopistas principales cuando este publicado; interestatales rurales pueden publicar 65/70/75/80 mph.",
+      "Debes reducir ante intersecciones, curvas, cima de colinas, vias estrechas, clima adverso, mala visibilidad y zonas de trabajo."
+    ],
+    objective: "Aprender limites base y cuando bajar la velocidad aunque la senal permita mas.",
+    sourceLabel: "Manual del Conductor de Utah, Velocidad",
+    sourceUrl: UTAH_DLD_HANDBOOK_ES_URL
+  },
+  "test-process": {
+    answerStrategy:
+      "Prioriza respuestas que remiten al manual oficial, al sitio .gov y a reglas confirmadas por Utah DLD.",
+    commonMistake: "Confiar en bancos privados como si fueran el examen real. Utah DLD advierte estudiar el manual oficial.",
+    keyPoints: [
+      "Utah DLD indica que todas las preguntas se basan en el Manual del Conductor de Utah.",
+      "Primera licencia: examen cerrado de 50 preguntas; licencia previa: examen abierto de 25 preguntas.",
+      "La practica oficial en linea tiene 30 preguntas, 30 minutos, puntaje y retroalimentacion.",
+      "El examen puede estar disponible en espanol con audio y texto, segun Utah DLD."
+    ],
+    objective: "Entender como se evalua antes de practicar preguntas.",
+    sourceLabel: "Utah DLD, Written Knowledge Test y Practice Test",
+    sourceUrl: UTAH_DLD_WRITTEN_TEST_URL
+  }
+};
+
+function getDmvStudyGuide(module: DmvLearningModule, stateOfficialSource: StateOfficialSource | null): DmvStudyGuide {
+  const guide = utahStudyGuides[module.moduleKey];
+  if (guide) return guide;
+
+  return {
+    answerStrategy:
+      "Lee la pregunta buscando la accion mas segura y confirmala contra la fuente oficial del estado antes de tomarla como regla.",
+    commonMistake:
+      "Usar reglas de otro estado. Cada estado puede cambiar formato, puntaje, documentos y detalles del manual.",
+    keyPoints: [
+      module.summaryEs,
+      "Este modulo esta registrado como contenido oficial, pero el banco de preguntas puede estar pendiente.",
+      "Para produccion, cada pregunta debe enlazarse a manual, pagina oficial o practica publica del estado."
+    ],
+    objective: `Estudiar ${module.titleEs.toLowerCase()} con fuente oficial verificada.`,
+    sourceLabel: stateOfficialSource?.sourceTitle ?? "Fuente oficial del estado",
+    sourceUrl: stateOfficialSource?.sourceUrl ?? UTAH_DLD_PRACTICE_TEST_URL
+  };
+}
+
 const fallbackUtahDmvQuestions: DmvPracticeQuestion[] = [
   {
     answerKey: "b",
@@ -1350,9 +1501,14 @@ const fallbackUtahDmvQuestions: DmvPracticeQuestion[] = [
       { key: "b", label: "25 mph" },
       { key: "c", label: "45 mph" }
     ],
+    difficulty: "standard",
+    displayOrder: 10,
     explanation: "El manual de Utah indica 25 mph en areas residenciales o comerciales sin senal.",
     id: "fallback-ut-speed-residential",
+    moduleKey: "speed",
     prompt: "Si no hay senal, cual es el limite en una zona residencial o comercial de Utah?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
     topic: "speed"
   },
   {
@@ -1362,9 +1518,14 @@ const fallbackUtahDmvQuestions: DmvPracticeQuestion[] = [
       { key: "b", label: "30 mph" },
       { key: "c", label: "55 mph" }
     ],
+    difficulty: "standard",
+    displayOrder: 20,
     explanation: "El manual de Utah lista 20 mph al pasar una escuela durante recreo, entrada/salida o luces.",
     id: "fallback-ut-speed-school",
+    moduleKey: "speed",
     prompt: "Cual es la velocidad indicada al pasar por una escuela durante entrada, salida o luces intermitentes?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
     topic: "speed"
   },
   {
@@ -1374,9 +1535,14 @@ const fallbackUtahDmvQuestions: DmvPracticeQuestion[] = [
       { key: "b", label: "Tocar bocina y avanzar" },
       { key: "c", label: "Detenerse antes de entrar y esperar hasta que sea permitido" }
     ],
+    difficulty: "intro",
+    displayOrder: 30,
     explanation: "Ante luz roja debes detenerte antes de entrar a la interseccion.",
     id: "fallback-ut-red-light",
+    moduleKey: "signals",
     prompt: "Que exige una luz roja antes de entrar a una interseccion?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
     topic: "signals"
   },
   {
@@ -1386,9 +1552,14 @@ const fallbackUtahDmvQuestions: DmvPracticeQuestion[] = [
       { key: "b", label: "Reducir velocidad y proceder con cautela" },
       { key: "c", label: "Detenerse siempre 10 segundos" }
     ],
+    difficulty: "intro",
+    displayOrder: 40,
     explanation: "Una luz amarilla intermitente requiere reducir velocidad y proceder con cautela.",
     id: "fallback-ut-flashing-yellow",
+    moduleKey: "signals",
     prompt: "Que debe hacer ante una luz amarilla intermitente?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
     topic: "signals"
   },
   {
@@ -1398,49 +1569,301 @@ const fallbackUtahDmvQuestions: DmvPracticeQuestion[] = [
       { key: "b", label: "Apagarlas solo si hay niebla" },
       { key: "c", label: "Bajarlas ante trafico cercano" }
     ],
+    difficulty: "standard",
+    displayOrder: 50,
     explanation: "El manual indica bajar luces altas ante trafico cercano para no encandilar.",
     id: "fallback-ut-high-beams",
+    moduleKey: "night-driving",
     prompt: "Que regla aplica con luces altas cuando hay vehiculos aproximandose?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
     topic: "night-driving"
+  },
+  {
+    answerKey: "b",
+    choices: [
+      { key: "a", label: "Seguir en tu carril a la misma velocidad" },
+      { key: "b", label: "Moverte a la derecha y detenerte hasta que pase" },
+      { key: "c", label: "Frenar en medio del carril izquierdo" }
+    ],
+    difficulty: "standard",
+    displayOrder: 60,
+    explanation:
+      "Utah exige ceder el paso, moverse de inmediato al lado derecho de la via y detenerse hasta que pase el vehiculo de emergencia.",
+    id: "fallback-ut-emergency-vehicle",
+    moduleKey: "right-of-way",
+    prompt: "Cuando se acerca una patrulla, ambulancia o camion de bomberos con sirena o luces, que debes hacer?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
+    topic: "right-of-way"
+  },
+  {
+    answerKey: "a",
+    choices: [
+      { key: "a", label: "Reducir velocidad y dar espacio; cambiar de carril si es seguro" },
+      { key: "b", label: "Mantener velocidad porque el vehiculo esta detenido" },
+      { key: "c", label: "Usar la bocina para avisar que pasaras" }
+    ],
+    difficulty: "hard",
+    displayOrder: 70,
+    explanation:
+      "La regla move over busca dar mas espacio y bajar la velocidad al pasar vehiculos detenidos con luces de emergencia.",
+    id: "fallback-ut-move-over",
+    moduleKey: "right-of-way",
+    prompt: "Que resume mejor la ley move over al acercarte a un vehiculo detenido con luces de emergencia?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
+    topic: "right-of-way"
+  },
+  {
+    answerKey: "a",
+    choices: [
+      { key: "a", label: "Fallar en mantenerse en el carril correcto" },
+      { key: "b", label: "Usar luces bajas de dia" },
+      { key: "c", label: "Estacionar en una pendiente" }
+    ],
+    difficulty: "standard",
+    displayOrder: 80,
+    explanation:
+      "El manual lista fallar en mantenerse en el carril correcto entre las principales causas de choques en Utah.",
+    id: "fallback-ut-lane-crash-stat",
+    moduleKey: "right-of-way",
+    prompt: "Que factor aparece entre las principales causas de choques en carreteras de Utah?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
+    topic: "safe-driving"
+  },
+  {
+    answerKey: "b",
+    choices: [
+      { key: "a", label: "Mejoran el tiempo de reaccion" },
+      { key: "b", label: "Reducen juicio, vision y tiempo de reaccion" },
+      { key: "c", label: "Solo afectan si el viaje es largo" }
+    ],
+    difficulty: "standard",
+    displayOrder: 90,
+    explanation: "El manual explica que alcohol y drogas reducen juicio, vision y respuesta ante el manejo.",
+    id: "fallback-ut-alcohol-drugs",
+    moduleKey: "alcohol-drugs",
+    prompt: "Que efecto pueden tener el alcohol y otras drogas al manejar?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
+    topic: "alcohol-drugs"
+  },
+  {
+    answerKey: "a",
+    choices: [
+      { key: "a", label: "Usar solo sitios que terminen en .gov para informacion DLD" },
+      { key: "b", label: "Cualquier pagina con logo sirve" },
+      { key: "c", label: "Los sitios privados reemplazan al manual oficial" }
+    ],
+    difficulty: "intro",
+    displayOrder: 100,
+    explanation: "El manual advierte tener cuidado con sitios imitadores que no terminan en .gov.",
+    id: "fallback-ut-official-sites",
+    moduleKey: "test-process",
+    prompt: "Que advertencia oficial da Utah DLD sobre sitios imitadores?",
+    questionSetId: "fallback-utah",
+    sourceRef: "Manual del Conductor de Utah.",
+    topic: "test-process"
   }
 ];
 
+const fallbackDmvModules: DmvLearningModule[] = [
+  {
+    displayOrder: 10,
+    id: "fallback-module-test-process",
+    moduleKey: "test-process",
+    summaryEs: "Formato del examen, idiomas, practica oficial y reglas basadas en el manual.",
+    titleEn: "Exam format",
+    titleEs: "Formato del examen"
+  },
+  {
+    displayOrder: 20,
+    id: "fallback-module-speed",
+    moduleKey: "speed",
+    summaryEs: "Limites sin senal, escuelas y velocidad segura para condiciones reales.",
+    titleEn: "Speed",
+    titleEs: "Velocidad y zonas escolares"
+  },
+  {
+    displayOrder: 30,
+    id: "fallback-module-signals",
+    moduleKey: "signals",
+    summaryEs: "Luces rojas, amarillas, flechas y senales que aparecen en el manual.",
+    titleEn: "Signals",
+    titleEs: "Semaforos y senales"
+  },
+  {
+    displayOrder: 40,
+    id: "fallback-module-right-of-way",
+    moduleKey: "right-of-way",
+    summaryEs: "Emergencias, intersecciones, ceder el paso y ley move over.",
+    titleEn: "Right of way",
+    titleEs: "Derecho de paso"
+  },
+  {
+    displayOrder: 50,
+    id: "fallback-module-night-driving",
+    moduleKey: "night-driving",
+    summaryEs: "Luces altas, visibilidad, fatiga y conduccion en condiciones dificiles.",
+    titleEn: "Night driving",
+    titleEs: "Manejo nocturno"
+  },
+  {
+    displayOrder: 60,
+    id: "fallback-module-alcohol-drugs",
+    moduleKey: "alcohol-drugs",
+    summaryEs: "Efectos de alcohol y drogas, DUI, interlock y decisiones seguras.",
+    titleEn: "Alcohol and drugs",
+    titleEs: "Alcohol, drogas y seguridad"
+  }
+];
+
+const fallbackDmvExamConfig: DmvExamConfig = {
+  availableLanguages: ["Spanish", "English"],
+  deliveryModes: ["in_person", "online_practice"],
+  examName: "Utah escrito - primera licencia",
+  id: "fallback-utah-exam",
+  licenseType: "standard_operator_never_licensed",
+  mustCorrectRules: {},
+  notes: "Vista de demostracion basada en fuentes oficiales de Utah DLD.",
+  openBook: false,
+  passingScore: null,
+  passingScorePercent: null,
+  questionCount: 50,
+  timeLimitMinutes: null
+};
+
 function UtilityHub({
   dataMode,
+  dmvExamConfig,
+  dmvLearningModules,
   dmvQuestions,
+  onRecordDmvAttempt,
   stateOfficialSource
 }: {
   dataMode: DataMode;
+  dmvExamConfig: DmvExamConfig | null;
+  dmvLearningModules: DmvLearningModule[];
   dmvQuestions: DmvPracticeQuestion[];
+  onRecordDmvAttempt: (input: RecordDmvAttemptInput) => Promise<void>;
   stateOfficialSource: StateOfficialSource | null;
 }) {
   const usePreviewFallback = dataMode !== "live" && dmvQuestions.length === 0;
-  const questions = dmvQuestions.length > 0 ? dmvQuestions : usePreviewFallback ? fallbackUtahDmvQuestions : [];
+  const questions = useMemo(
+    () => (dmvQuestions.length > 0 ? dmvQuestions : usePreviewFallback ? fallbackUtahDmvQuestions : []),
+    [dmvQuestions, usePreviewFallback]
+  );
+  const modules = useMemo(
+    () => (dmvLearningModules.length > 0 ? dmvLearningModules : usePreviewFallback ? fallbackDmvModules : []),
+    [dmvLearningModules, usePreviewFallback]
+  );
+  const examConfig = dmvExamConfig ?? (usePreviewFallback ? fallbackDmvExamConfig : null);
   const hasPractice = questions.length > 0;
   const stateName = stateOfficialSource?.stateName ?? "Utah";
+  const [utilityMode, setUtilityMode] = useState<"study" | "practice">("study");
+  const [selectedModuleKey, setSelectedModuleKey] = useState<string | null>(null);
+  const [practiceModuleKey, setPracticeModuleKey] = useState<string | null>(null);
   const [quizStarted, setQuizStarted] = useState(false);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [score, setScore] = useState(0);
-  const currentQuestion = hasPractice ? questions[Math.min(questionIndex, questions.length - 1)]! : null;
+  const [quizAnswers, setQuizAnswers] = useState<DmvAttemptAnswerInput[]>([]);
+  const [quizStartedAt, setQuizStartedAt] = useState<string | null>(null);
+  const [attemptMessage, setAttemptMessage] = useState<string | null>(null);
+  const moduleQuestionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const question of questions) {
+      if (!question.moduleKey) continue;
+      counts.set(question.moduleKey, (counts.get(question.moduleKey) ?? 0) + 1);
+    }
+    return counts;
+  }, [questions]);
+  const moduleTitleByKey = useMemo(() => new Map(modules.map((module) => [module.moduleKey, module.titleEs])), [modules]);
+  const activeModule = modules.find((module) => module.moduleKey === selectedModuleKey) ?? modules[0] ?? null;
+  const activeGuide = activeModule ? getDmvStudyGuide(activeModule, stateOfficialSource) : null;
+  const activeModuleQuestionCount = activeModule ? (moduleQuestionCounts.get(activeModule.moduleKey) ?? 0) : 0;
+  const practiceQuestions = useMemo(() => {
+    if (!practiceModuleKey) return questions;
+    return questions.filter((question) => question.moduleKey === practiceModuleKey);
+  }, [practiceModuleKey, questions]);
+  const practiceQuestionCount = practiceQuestions.length;
+  const practiceScopeLabel = practiceModuleKey ? (moduleTitleByKey.get(practiceModuleKey) ?? "Tema seleccionado") : "Practica completa";
+  const currentQuestion =
+    hasPractice && practiceQuestionCount > 0 ? practiceQuestions[Math.min(questionIndex, practiceQuestionCount - 1)]! : null;
   const answered = selectedChoice !== null;
-  const completed = hasPractice && quizStarted && questionIndex >= questions.length;
+  const completed = hasPractice && quizStarted && practiceQuestionCount > 0 && questionIndex >= practiceQuestionCount;
+  const passingScore = examConfig?.passingScore
+    ? Math.min(examConfig.passingScore, practiceQuestionCount || questions.length)
+    : Math.ceil((practiceQuestionCount || questions.length) * 0.8);
+  const passText =
+    examConfig?.passingScore && examConfig.questionCount
+      ? `${examConfig.passingScore}/${examConfig.questionCount}`
+      : examConfig?.passingScorePercent
+        ? `${examConfig.passingScorePercent}%`
+        : "Practica recomendada 80%";
+  const questionCountText = examConfig?.questionCount ? `${examConfig.questionCount} preguntas oficiales` : "Conteo oficial pendiente";
+  const deliveryText = examConfig?.deliveryModes.length ? examConfig.deliveryModes.join(", ").replaceAll("_", " ") : "Segun estado";
+  const languageText = examConfig?.availableLanguages.length ? examConfig.availableLanguages.slice(0, 4).join(", ") : "Ver fuente oficial";
+  const officialSourceUrl = stateOfficialSource?.stateCode === "UT" ? UTAH_DLD_WRITTEN_TEST_URL : (stateOfficialSource?.sourceUrl ?? UTAH_DLD_WRITTEN_TEST_URL);
 
-  const resetQuiz = () => {
+  const resetQuiz = (scopeModuleKey: string | null = null) => {
     if (!hasPractice) return;
+    setPracticeModuleKey(scopeModuleKey);
     setQuizStarted(true);
     setQuestionIndex(0);
     setSelectedChoice(null);
     setScore(0);
+    setQuizAnswers([]);
+    setQuizStartedAt(new Date().toISOString());
+    setAttemptMessage(null);
   };
 
-  const advanceQuiz = () => {
-    if (!currentQuestion) return;
-    if (selectedChoice === currentQuestion.answerKey) {
-      setScore((current) => current + 1);
-    }
+  const startPractice = (scopeModuleKey: string | null = null) => {
+    setUtilityMode("practice");
+    resetQuiz(scopeModuleKey);
+  };
+
+  const advanceQuiz = async () => {
+    if (!currentQuestion || selectedChoice === null) return;
+
+    const correct = selectedChoice === currentQuestion.answerKey;
+    const nextScore = score + (correct ? 1 : 0);
+    const nextAnswers = [
+      ...quizAnswers,
+      {
+        correct,
+        questionId: currentQuestion.id,
+        selectedOptionKey: selectedChoice
+      }
+    ];
+
+    setScore(nextScore);
+    setQuizAnswers(nextAnswers);
     setSelectedChoice(null);
     setQuestionIndex((current) => current + 1);
+
+    if (questionIndex === practiceQuestionCount - 1 && dataMode === "live") {
+      try {
+        const startedAt = quizStartedAt ?? new Date().toISOString();
+        const durationSeconds = Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 1000));
+        await onRecordDmvAttempt({
+          answers: nextAnswers,
+          durationSeconds,
+          examConfigId: examConfig?.id ?? null,
+          mode: "practice",
+          passed: nextScore >= passingScore,
+          questionSetId: currentQuestion.questionSetId,
+          scoreCorrect: nextScore,
+          startedAt,
+          totalQuestions: practiceQuestionCount
+        });
+        setAttemptMessage("Resultado guardado en tu progreso.");
+      } catch {
+        setAttemptMessage("No se pudo guardar el resultado, pero tu practica termino.");
+      }
+    }
   };
 
   return (
@@ -1455,12 +1878,12 @@ function UtilityHub({
           <strong>{hasPractice ? `Simulador DMV ${stateName}` : `Portal oficial DMV ${stateName}`}</strong>
           <span>
             {hasPractice
-              ? "Practica para tu examen escrito con preguntas basadas en fuentes oficiales."
+              ? `${questions.length} preguntas de practica, guias de estudio y explicaciones basadas en fuentes oficiales.`
               : "Fuente oficial verificada. El simulador se activa cuando importemos el manual de este estado."}
           </span>
           {hasPractice ? (
-            <button className="primary-button" onClick={resetQuiz}>
-              Comenzar practica <ChevronRight size={16} />
+            <button className="primary-button" onClick={() => startPractice(null)}>
+              {quizStarted ? "Reiniciar practica completa" : "Comenzar practica"} <ChevronRight size={16} />
             </button>
           ) : stateOfficialSource ? (
             <a className="dmv-source-link" href={stateOfficialSource.sourceUrl} rel="noreferrer" target="_blank">
@@ -1470,57 +1893,211 @@ function UtilityHub({
         </div>
       </section>
 
-      {quizStarted && currentQuestion ? (
-        <section className="quiz-panel">
-          {completed ? (
-            <>
-              <div className="quiz-result">
-                <strong>
-                  Resultado: {score}/{questions.length}
-                </strong>
-                <span>{score >= 4 ? "Listo para seguir practicando por temas." : "Repasa velocidad, senales y luces."}</span>
-              </div>
-              <button className="primary-button" onClick={resetQuiz}>
-                Repetir practica
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="quiz-heading">
-                <strong>
-                  Pregunta {questionIndex + 1}/{questions.length}
-                </strong>
-                <a href="https://dld.utah.gov/resources/" rel="noreferrer" target="_blank">
-                  Manual Utah DLD
-                </a>
-              </div>
-              <p>{currentQuestion.prompt}</p>
-              <div className="quiz-options">
-                {currentQuestion.choices.map((choice) => {
-                  const isCorrect = answered && choice.key === currentQuestion.answerKey;
-                  const isWrong = answered && choice.key === selectedChoice && choice.key !== currentQuestion.answerKey;
-                  return (
-                    <button
-                      className={`${isCorrect ? "correct" : ""} ${isWrong ? "wrong" : ""}`}
-                      disabled={answered}
-                      key={choice.key}
-                      onClick={() => setSelectedChoice(choice.key)}
-                    >
-                      {choice.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {answered && currentQuestion.explanation ? (
-                <span className="quiz-explanation">{currentQuestion.explanation}</span>
-              ) : null}
-              {answered ? (
-                <button className="primary-button" onClick={advanceQuiz}>
-                  {questionIndex === questions.length - 1 ? "Ver resultado" : "Siguiente"}
+      <div className="utility-mode-switch" aria-label="Modo del simulador de manejo">
+        <button className={utilityMode === "study" ? "active" : ""} onClick={() => setUtilityMode("study")} type="button">
+          <BookOpen size={16} /> Estudiar
+        </button>
+        <button className={utilityMode === "practice" ? "active" : ""} onClick={() => setUtilityMode("practice")} type="button">
+          <ClipboardCheck size={16} /> Practicar
+        </button>
+      </div>
+
+      <section className="dmv-meta-grid">
+        <article>
+          <span>Examen</span>
+          <strong>{examConfig?.examName ?? "Pendiente de importar"}</strong>
+          <small>{questionCountText}</small>
+        </article>
+        <article>
+          <span>Aprobacion</span>
+          <strong>{passText}</strong>
+          <small>{examConfig?.openBook === null ? "Ver regla oficial" : examConfig?.openBook ? "Libro abierto" : "Libro cerrado"}</small>
+        </article>
+        <article>
+          <span>Modalidad</span>
+          <strong>{deliveryText}</strong>
+          <small>{languageText}</small>
+        </article>
+      </section>
+
+      {utilityMode === "study" && modules.length > 0 ? (
+        <section className="section-block dmv-study-section">
+          <div className="section-heading">
+            <h2>Estudia antes de practicar</h2>
+            <a className="dmv-source-link compact" href={officialSourceUrl} rel="noreferrer" target="_blank">
+              Fuente oficial <ExternalLink size={14} />
+            </a>
+          </div>
+          <div className="dmv-study-layout">
+            <div className="dmv-module-list" aria-label="Temas de estudio">
+              {modules.map((module) => {
+                const questionTotal = moduleQuestionCounts.get(module.moduleKey) ?? 0;
+                return (
+                  <button
+                    className={`dmv-module selectable ${activeModule?.moduleKey === module.moduleKey ? "selected" : ""}`}
+                    key={module.id}
+                    onClick={() => setSelectedModuleKey(module.moduleKey)}
+                    type="button"
+                  >
+                    <span>{String(module.displayOrder).padStart(2, "0")}</span>
+                    <div>
+                      <strong>{module.titleEs}</strong>
+                      <small>{module.summaryEs}</small>
+                      <em>{questionTotal > 0 ? `${questionTotal} preguntas de practica` : "Lectura oficial pendiente de banco"}</em>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeModule && activeGuide ? (
+              <article className="study-guide-panel">
+                <div className="study-guide-heading">
+                  <span className="quiz-topic">{activeModule.moduleKey.replaceAll("-", " ")}</span>
+                  <strong>{activeModule.titleEs}</strong>
+                  <p>{activeGuide.objective}</p>
+                </div>
+                <div className="study-guide-body">
+                  <div>
+                    <div className="study-subheading">
+                      <ListChecks size={17} />
+                      <strong>Claves para responder</strong>
+                    </div>
+                    <ul className="study-key-points">
+                      {activeGuide.keyPoints.map((point) => (
+                        <li key={point}>{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <aside className="study-answer-notes">
+                    <span>Error comun</span>
+                    <p>{activeGuide.commonMistake}</p>
+                    <span>Estrategia</span>
+                    <p>{activeGuide.answerStrategy}</p>
+                  </aside>
+                </div>
+                <div className="study-guide-actions">
+                  <button
+                    className="primary-button"
+                    disabled={activeModuleQuestionCount === 0}
+                    onClick={() => startPractice(activeModule.moduleKey)}
+                  >
+                    Practicar este tema <ChevronRight size={16} />
+                  </button>
+                  <a className="dmv-source-link compact" href={activeGuide.sourceUrl} rel="noreferrer" target="_blank">
+                    {activeGuide.sourceLabel} <ExternalLink size={14} />
+                  </a>
+                </div>
+              </article>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {utilityMode === "practice" ? (
+        <section className="section-block dmv-practice-section">
+          <div className="section-heading">
+            <h2>Practica interactiva</h2>
+            <button className="study-return-button" onClick={() => setUtilityMode("study")} type="button">
+              Volver a estudiar
+            </button>
+          </div>
+          <div className="practice-scope-row" aria-label="Tipo de practica">
+            <button className={!practiceModuleKey ? "active" : ""} onClick={() => resetQuiz(null)} type="button">
+              Completa <span>{questions.length}</span>
+            </button>
+            {modules.map((module) => {
+              const questionTotal = moduleQuestionCounts.get(module.moduleKey) ?? 0;
+              return (
+                <button
+                  className={practiceModuleKey === module.moduleKey ? "active" : ""}
+                  disabled={questionTotal === 0}
+                  key={module.id}
+                  onClick={() => resetQuiz(module.moduleKey)}
+                  type="button"
+                >
+                  {module.titleEs} <span>{questionTotal}</span>
                 </button>
-              ) : null}
-            </>
-          )}
+              );
+            })}
+          </div>
+
+          {!quizStarted ? (
+            <section className="quiz-panel quiz-start-panel">
+              <div className="quiz-result">
+                <strong>Elige practica completa o por tema.</strong>
+                <span>Primero estudia las claves, despues responde. La explicacion aparece al seleccionar cada respuesta.</span>
+              </div>
+              <button className="primary-button" disabled={!hasPractice} onClick={() => resetQuiz(null)}>
+                Iniciar practica completa
+              </button>
+            </section>
+          ) : null}
+
+          {quizStarted && currentQuestion ? (
+            <section className="quiz-panel">
+              {completed ? (
+                <>
+                  <div className="quiz-result">
+                    <strong>
+                      Resultado {practiceScopeLabel}: {score}/{practiceQuestionCount}
+                    </strong>
+                    <span>
+                      {score >= passingScore
+                        ? "Buen resultado para seguir reforzando por temas."
+                        : "Repasa los modulos marcados y repite la practica."}
+                    </span>
+                  </div>
+                  {attemptMessage ? <span className="quiz-explanation">{attemptMessage}</span> : null}
+                  <button className="primary-button" onClick={() => resetQuiz(practiceModuleKey)}>
+                    Repetir practica
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="quiz-heading">
+                    <strong>
+                      {practiceScopeLabel}: pregunta {questionIndex + 1}/{practiceQuestionCount}
+                    </strong>
+                    <a href={officialSourceUrl} rel="noreferrer" target="_blank">
+                      Fuente oficial
+                    </a>
+                  </div>
+                  {currentQuestion.moduleKey ? (
+                    <span className="quiz-topic">{moduleTitleByKey.get(currentQuestion.moduleKey) ?? currentQuestion.moduleKey.replaceAll("-", " ")}</span>
+                  ) : null}
+                  <p>{currentQuestion.prompt}</p>
+                  <div className="quiz-options">
+                    {currentQuestion.choices.map((choice) => {
+                      const isCorrect = answered && choice.key === currentQuestion.answerKey;
+                      const isWrong = answered && choice.key === selectedChoice && choice.key !== currentQuestion.answerKey;
+                      return (
+                        <button
+                          className={`${isCorrect ? "correct" : ""} ${isWrong ? "wrong" : ""}`}
+                          disabled={answered}
+                          key={choice.key}
+                          onClick={() => setSelectedChoice(choice.key)}
+                        >
+                          {choice.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {answered && currentQuestion.explanation ? (
+                    <span className="quiz-explanation">
+                      {currentQuestion.explanation}
+                      {currentQuestion.sourceRef ? ` Fuente: ${currentQuestion.sourceRef}` : ""}
+                    </span>
+                  ) : null}
+                  {answered ? (
+                    <button className="primary-button" onClick={() => void advanceQuiz()}>
+                      {questionIndex === practiceQuestionCount - 1 ? "Ver resultado" : "Siguiente"}
+                    </button>
+                  ) : null}
+                </>
+              )}
+            </section>
+          ) : null}
         </section>
       ) : null}
 
