@@ -240,9 +240,6 @@ export function LandingPage() {
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const context = gsap.context(() => {
-      gsap.set(".lp-scroll-step", { autoAlpha: 0, y: 22, yPercent: -50 });
-      gsap.set(".lp-scroll-step[data-step='1']", { autoAlpha: 1, y: 0, yPercent: -50 });
-
       if (reduceMotion) return;
 
       gsap.from(".lp-hero-copy > *", {
@@ -269,28 +266,6 @@ export function LandingPage() {
           trigger: ".lp-hero"
         }
       });
-
-      const storyTimeline = gsap.timeline({
-        defaults: { ease: "none" },
-        scrollTrigger: {
-          end: "+=2800",
-          pin: ".lp-scroll-showcase",
-          scrub: 0.75,
-          start: "top top"
-        }
-      });
-
-      storyTimeline
-        .to(".lp-sticky-media .lp-stage-video", { scale: 1.08, xPercent: -3, yPercent: -2 }, 0)
-        .to(".lp-scroll-orbit", { rotation: 52, scale: 1.08 }, 0)
-        .to(".lp-scroll-step[data-step='1']", { autoAlpha: 0, y: -24 }, 0.18)
-        .to(".lp-scroll-step[data-step='2']", { autoAlpha: 1, y: 0 }, 0.22)
-        .to(".lp-scroll-step[data-step='2']", { autoAlpha: 0, y: -24 }, 0.42)
-        .to(".lp-scroll-step[data-step='3']", { autoAlpha: 1, y: 0 }, 0.48)
-        .to(".lp-sticky-media .lp-stage-video", { scale: 1.13, xPercent: 3, yPercent: 2 }, 0.5)
-        .to(".lp-scroll-step[data-step='3']", { autoAlpha: 0, y: -24 }, 0.68)
-        .to(".lp-scroll-step[data-step='4']", { autoAlpha: 1, y: 0 }, 0.74)
-        .to(".lp-scroll-rail i", { height: "100%" }, 0);
 
       gsap.utils.toArray<HTMLElement>(".lp-reveal").forEach((element) => {
         gsap.from(element, {
@@ -331,25 +306,24 @@ export function LandingPage() {
           <a href="#precio">Precio</a>
         </nav>
         <a className="lp-nav-cta" href="/">
-          Entrar a la app <ChevronRight size={16} />
+          Abrir MiCaso <ChevronRight size={16} />
         </a>
       </header>
 
       <main>
         <section className="lp-hero" id="inicio">
           <div className="lp-hero-copy">
-            <span className="lp-product-line">MiCaso Prime · $14/mes</span>
-            <h1>Tu proceso migratorio, en una sola vista.</h1>
+            <span className="lp-product-line">MiCaso Prime | $14/mes</span>
+            <h1>Centro de control migratorio en tu bolsillo.</h1>
             <p>
-              Organiza documentos, fechas criticas, formularios, DMV y soporte experto en un centro de control diseñado
-              para inmigrantes en Estados Unidos.
+              Documentos, fechas, formularios y DMV en una vista clara para saber que sigue.
             </p>
             <div className="lp-hero-actions">
               <a className="lp-primary" href="/">
-                Empezar por $14/mes <ChevronRight size={18} />
+                Empezar ahora por $14/mes <ChevronRight size={18} />
               </a>
               <a className="lp-secondary" href="#producto">
-                Ver como funciona
+                Ver demo visual
               </a>
             </div>
             <div className="lp-hero-proof" aria-label="Resumen de confianza">
@@ -375,6 +349,14 @@ export function LandingPage() {
             <div className="lp-video-meta">
               <span>Centro de control</span>
               <strong>Boveda · Alertas · Formularios</strong>
+            </div>
+            <div className="lp-hero-floating-status status-main" aria-hidden="true">
+              <span>Hoy</span>
+              <strong>En orden</strong>
+            </div>
+            <div className="lp-hero-floating-status status-secondary" aria-hidden="true">
+              <span>Proxima accion</span>
+              <strong>Revisar alertas</strong>
             </div>
           </div>
         </section>
@@ -402,38 +384,62 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="lp-scroll-showcase" id="producto">
-          <div className="lp-scroll-copy">
-            {scrollChapters.map((chapter, index) => {
-              const Icon = chapter.icon;
-              return (
-                <article className="lp-scroll-step" data-step={index + 1} key={chapter.title}>
-                  <span>{chapter.kicker}</span>
-                  <h2>{chapter.title}</h2>
-                  <p>{chapter.copy}</p>
-                  <strong><Icon size={16} /> {chapter.stat}</strong>
-                </article>
-              );
-            })}
+        <section className="lp-scroll-showcase lp-command-section" id="producto">
+          <div className="lp-command-visual lp-reveal">
+            <div className="lp-sticky-media lp-command-media" aria-label="Centro visual de control MiCaso Prime">
+              <video
+                aria-label="Centro de control MiCaso Prime"
+                autoPlay
+                className="lp-stage-video"
+                loop
+                muted
+                playsInline
+                poster={stickyKeyframe}
+                preload="metadata"
+              >
+                <source src={stickyVideo} type="video/mp4" />
+              </video>
+              <div className="lp-command-glow" aria-hidden="true" />
+              <div className="lp-command-status" aria-hidden="true">
+                <span>Hoy</span>
+                <strong>En orden</strong>
+              </div>
+              <div className="lp-command-dock" aria-hidden="true">
+                {scrollChapters.map((chapter) => {
+                  const Icon = chapter.icon;
+                  return (
+                    <span key={chapter.stat}>
+                      <Icon size={16} />
+                      {chapter.stat}
+                    </span>
+                  );
+                })}
+              </div>
+              <div className="lp-scroll-orbit" aria-hidden="true">
+                <span>I-94</span>
+                <span>Corte</span>
+                <span>PDF</span>
+                <span>DMV</span>
+              </div>
+            </div>
           </div>
-          <div className="lp-sticky-media" aria-label="Demo visual de scroll">
-            <video
-              aria-label="Centro de control MiCaso Prime"
-              autoPlay
-              className="lp-stage-video"
-              loop
-              muted
-              playsInline
-              poster={stickyKeyframe}
-              preload="metadata"
-            >
-              <source src={stickyVideo} type="video/mp4" />
-            </video>
-            <div className="lp-scroll-orbit" aria-hidden="true">
-              <span>I-94</span>
-              <span>Corte</span>
-              <span>PDF</span>
-              <span>DMV</span>
+          <div className="lp-scroll-copy lp-command-copy lp-reveal">
+            <span className="lp-kicker lime">Centro de control</span>
+            <h2 className="lp-deck-title">Un tablero vivo para saber que sigue.</h2>
+            <p className="lp-command-lede">
+              Sin leer carpetas eternas: ves estatus, documentos, fechas y acciones en segundos.
+            </p>
+            <div className="lp-step-grid lp-command-grid">
+              {scrollChapters.map((chapter, index) => {
+                const Icon = chapter.icon;
+                return (
+                  <article className="lp-scroll-step" data-step={index + 1} key={chapter.title}>
+                    <Icon size={20} />
+                    <span>{`0${index + 1}`}</span>
+                    <strong>{chapter.stat}</strong>
+                  </article>
+                );
+              })}
             </div>
           </div>
           <div className="lp-scroll-rail" aria-hidden="true">
@@ -441,17 +447,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="lp-services-intro" id="servicios">
-          <div className="lp-section-heading lp-reveal">
-            <h2>Un SaaS para ordenar lo que mas miedo da perder.</h2>
-            <p>
-              La landing debe vender claridad: cada modulo resuelve una parte concreta del proceso, sin prometer asesoria
-              legal automatica.
-            </p>
-          </div>
-        </section>
-
-        <div className="lp-service-stack">
+        <div className="lp-service-stack" id="servicios">
           {serviceSections.map((service, index) => (
             <section className={`lp-service-section ${index % 2 === 1 ? "reverse" : ""}`} key={service.title}>
               <div className="lp-service-copy lp-reveal">
@@ -496,7 +492,7 @@ export function LandingPage() {
               ))}
             </ul>
             <a className="lp-primary" href="/">
-              Empezar por $14 <ChevronRight size={18} />
+              Empezar ahora por $14 <ChevronRight size={18} />
             </a>
             <p>La app organiza y prepara. No reemplaza asesoria legal.</p>
           </div>
@@ -546,10 +542,10 @@ export function LandingPage() {
             </p>
             <div className="lp-hero-actions">
               <a className="lp-primary" href="/">
-                Crear mi cuenta por $14/mes <ChevronRight size={18} />
+                Activar MiCaso Prime <ChevronRight size={18} />
               </a>
               <a className="lp-secondary dark" href="#servicios">
-                Revisar servicios
+                Ver servicios incluidos
               </a>
             </div>
           </div>
