@@ -26,17 +26,24 @@
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+  background: #ffffff;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
   min-height: 100dvh;
+  background: #ffffff;
   overscroll-behavior-y: none;
 }
 
 #root {
   min-height: 100vh;
   min-height: 100dvh;
+  background: #ffffff;
 }
 
 button {
@@ -2408,7 +2415,7 @@ button {
   overflow: hidden;
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
-  background: rgb(255 255 255 / 94%);
+  background: #ffffff;
   backdrop-filter: blur(18px);
 }
 
@@ -2492,20 +2499,31 @@ button {
 }
 
 @media (max-width: 900px) {
+  body,
+  #root {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #ffffff;
+  }
+
   .app-frame {
     display: block;
+    min-height: 100vh;
     min-height: 100dvh;
     padding: 0;
-    background: #f8fafb;
+    background: #ffffff;
   }
 
   .phone-shell {
     max-width: none;
     width: 100%;
+    height: 100vh;
     height: 100dvh;
+    min-height: 100vh;
     min-height: 100dvh;
     border: 0;
     border-radius: 0;
+    background: #ffffff;
     box-shadow: none;
   }
 
@@ -2515,6 +2533,28 @@ button {
 
   .desktop-brief {
     display: none;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 900px) {
+    html,
+    body,
+    #root,
+    .app-frame {
+      min-height: -webkit-fill-available;
+      background: #ffffff;
+    }
+
+    .phone-shell {
+      height: -webkit-fill-available;
+      min-height: -webkit-fill-available;
+    }
+
+    .bottom-nav {
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      background: #ffffff;
+    }
   }
 }
 
