@@ -2413,7 +2413,7 @@ button {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   max-width: 100%;
   overflow: hidden;
-  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  padding: 8px 8px calc(8px + min(env(safe-area-inset-bottom), 24px));
   border-top: 1px solid var(--line);
   background: #ffffff;
   backdrop-filter: blur(18px);
@@ -2531,6 +2531,21 @@ button {
     padding-top: calc(18px + env(safe-area-inset-top));
   }
 
+  .screen-content {
+    padding-bottom: calc(78px + min(env(safe-area-inset-bottom), 24px));
+  }
+
+  .bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 35;
+    padding-bottom: calc(8px + min(env(safe-area-inset-bottom), 24px));
+    background: #ffffff;
+    box-shadow: 0 -10px 28px rgb(9 35 53 / 8%);
+  }
+
   .desktop-brief {
     display: none;
   }
@@ -2542,18 +2557,20 @@ button {
     body,
     #root,
     .app-frame {
-      min-height: -webkit-fill-available;
+      min-height: 100vh;
+      min-height: 100dvh;
       background: #ffffff;
     }
 
     .phone-shell {
-      height: -webkit-fill-available;
-      min-height: -webkit-fill-available;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 100vh;
+      min-height: 100dvh;
     }
 
-    .bottom-nav {
-      padding-bottom: calc(10px + env(safe-area-inset-bottom));
-      background: #ffffff;
+    .screen-content {
+      padding-bottom: calc(86px + min(env(safe-area-inset-bottom), 24px));
     }
   }
 }
