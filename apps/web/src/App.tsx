@@ -31,7 +31,7 @@ import {
   Zap,
   ListChecks
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import type {
   Agency,
   AlertKind,
@@ -44,6 +44,7 @@ import type {
   StatusSeverity,
   VaultDocument
 } from "@usa-latino-prime/shared";
+import micasoPrimeLogo from "./assets/landing/micaso-prime-logo.png";
 import { resourceRows } from "./data/demo";
 import {
   useAppData,
@@ -61,6 +62,8 @@ import {
   type UploadDocumentInput,
   type UserProfile
 } from "./hooks/useAppData";
+
+const LandingPage = lazy(() => import("./components/LandingPage").then((module) => ({ default: module.LandingPage })));
 
 type TabId = "home" | "documents" | "automation" | "utilities" | "more";
 type DataMode = "preview" | "auth_required" | "live";
@@ -137,6 +140,12 @@ function getInitialTab(): TabId {
   return tabIds.has(tab as TabId) ? (tab as TabId) : "home";
 }
 
+function shouldShowLanding(): boolean {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return window.location.pathname === "/landing" || params.get("landing") === "1";
+}
+
 const severityLabel: Record<StatusSeverity, string> = {
   green: "Estatus estable",
   yellow: "Requiere atencion",
@@ -166,6 +175,18 @@ function formCodeForFlow(flow: AutomationFlow): string {
 }
 
 export function App() {
+  if (shouldShowLanding()) {
+    return (
+      <Suspense fallback={<div className="landing-loading">Cargando MiCaso Prime...</div>}>
+        <LandingPage />
+      </Suspense>
+    );
+  }
+
+  return <PrimeApp />;
+}
+
+function PrimeApp() {
   const appData = useAppData();
   const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
 
@@ -320,9 +341,11 @@ function AppHeader({
         <UserRound size={18} />
       </button>
       <div className="brand-lockup">
-        <span className="brand-mark">U</span>
+        <span className="brand-mark product-brand-mark">
+          <img alt="" src={micasoPrimeLogo} />
+        </span>
         <div>
-          <strong>USA Latino</strong>
+          <strong>MiCaso</strong>
           <small>Prime</small>
         </div>
       </div>
@@ -441,7 +464,7 @@ function Dashboard({
         <span>Tus datos estan cifrados y protegidos.</span>
       </div>
 
-      <p className="legal-note">USA Latino Prime no es un bufete de abogados y no brinda asesoria legal.</p>
+      <p className="legal-note">MiCaso Prime no es un bufete de abogados y no brinda asesoria legal.</p>
     </main>
   );
 }

@@ -1,17 +1,17 @@
 {
-  "name": "USA Latino Prime",
-  "short_name": "Latino Prime",
-  "description": "Centro de control migratorio para documentos, fechas criticas y tramites.",
+  "name": "MiCaso Prime",
+  "short_name": "MiCaso",
+  "description": "Centro de control migratorio de UsaLatino Prime para documentos, fechas criticas y tramites.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f6f8fa",
-  "theme_color": "#003c57",
+  "background_color": "#03070d",
+  "theme_color": "#07080b",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/micaso-prime-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

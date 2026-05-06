@@ -2,7 +2,7 @@
   "name": "usa-latino-prime",
   "version": "0.1.0",
   "private": true,
-  "description": "PWA migration control center for USA Latino Prime.",
+  "description": "PWA migration control center for MiCaso Prime by UsaLatino Prime.",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -23,6 +23,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "gsap": "^3.15.0",
     "helmet": "^8.1.0",
     "lucide-react": "^0.468.0",
     "morgan": "^1.10.1",

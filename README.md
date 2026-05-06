@@ -1,4 +1,4 @@
-# USA Latino Prime
+# MiCaso Prime
 
 PWA mobile-first para organizar documentos migratorios, fechas críticas, automatizaciones administrativas y servicios premium.
 

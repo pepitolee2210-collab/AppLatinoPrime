@@ -123,7 +123,7 @@ async function loadOfficialTemplate(
 
   const response = await fetch(source.url, {
     headers: {
-      "User-Agent": "USA-Latino-Prime/1.0 official-form-sync"
+      "User-Agent": "MiCaso-Prime/1.0 official-form-sync"
     }
   });
 
@@ -235,7 +235,7 @@ async function createSummaryPacketPdf(params: {
   });
 
   y = 754;
-  draw("USA Latino Prime", { font: boldFont, size: 17, color: rgb(1, 1, 1), lineHeight: 19 });
+  draw("MiCaso Prime", { font: boldFont, size: 17, color: rgb(1, 1, 1), lineHeight: 19 });
   draw("Paquete de preparacion y revision", { size: 10, color: rgb(0.78, 0.94, 0.95) });
   y = 692;
 

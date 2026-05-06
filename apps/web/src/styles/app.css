@@ -6,13 +6,13 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --blue-900: #003c57;
-  --blue-800: #064c6c;
-  --teal-700: #006f78;
-  --teal-600: #078f96;
-  --green-600: #4caf50;
-  --amber-500: #ffba2f;
-  --orange-500: #f28c28;
+  --blue-900: #07080b;
+  --blue-800: #101923;
+  --teal-700: #1b2a38;
+  --teal-600: #4da3ff;
+  --green-600: #74c700;
+  --amber-500: #c8ff00;
+  --orange-500: #ff8a00;
   --red-600: #e53935;
   --ink: #092335;
   --muted: #667783;
@@ -39,6 +39,16 @@ button {
   cursor: pointer;
 }
 
+.landing-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: #080b0b;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+}
+
 .app-frame {
   min-height: 100vh;
   display: grid;
@@ -48,8 +58,9 @@ button {
   gap: 42px;
   padding: 32px;
   background:
-    radial-gradient(circle at 20% 10%, rgb(35 166 168 / 12%), transparent 32%),
-    linear-gradient(135deg, #eef3f6 0%, #f9fbfc 46%, #e8f1f3 100%);
+    radial-gradient(circle at 20% 10%, rgb(200 255 0 / 12%), transparent 32%),
+    radial-gradient(circle at 78% 14%, rgb(77 163 255 / 14%), transparent 28%),
+    linear-gradient(135deg, #03070d 0%, #101923 44%, #dfe7ef 100%);
 }
 
 .phone-shell {
@@ -73,7 +84,7 @@ button {
   justify-content: space-between;
   padding: 28px 20px 18px;
   color: #ffffff;
-  background: linear-gradient(135deg, #002f49 0%, #005a78 100%);
+  background: linear-gradient(135deg, #07080b 0%, #101923 62%, #1d2a36 100%);
 }
 
 .brand-lockup {
@@ -93,9 +104,9 @@ button {
 
 .brand-lockup small {
   display: block;
-  color: #cdeef1;
+  color: #c8ff00;
   font-size: 11px;
-  letter-spacing: 4px;
+  letter-spacing: 2px;
 }
 
 .brand-mark {
@@ -107,6 +118,21 @@ button {
   color: #ffffff;
   background: linear-gradient(180deg, var(--teal-600), var(--orange-500));
   font-weight: 900;
+}
+
+.product-brand-mark {
+  overflow: hidden;
+  color: #ffffff;
+  background: linear-gradient(145deg, #f9fcff 0%, #cdd6df 55%, #151b21 100%);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 34%),
+    0 10px 22px rgb(0 0 0 / 24%);
+}
+
+.product-brand-mark img {
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
 }
 
 .icon-button {
