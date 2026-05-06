@@ -8,6 +8,7 @@ import {
   Cloud,
   CreditCard,
   Database,
+  Download,
   ExternalLink,
   FileCheck2,
   FileText,
@@ -25,13 +26,14 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Share2,
+  Smartphone,
   Sparkles,
-  UserRound,
   WalletCards,
   Zap,
   ListChecks
 } from "lucide-react";
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import type {
   Agency,
   AlertKind,
@@ -67,6 +69,38 @@ const LandingPage = lazy(() => import("./components/LandingPage").then((module) 
 
 type TabId = "home" | "documents" | "automation" | "utilities" | "more";
 type DataMode = "preview" | "auth_required" | "live";
+type GuideStep = {
+  action: string;
+  body: string;
+  icon: typeof Home;
+  kicker: string;
+  tab: TabId;
+  tips: string[];
+  title: string;
+};
+type SectionHelp = {
+  body: string;
+  kicker: string;
+  steps: string[];
+  title: string;
+};
+type PwaInstallChoice = {
+  outcome: "accepted" | "dismissed";
+  platform?: string;
+};
+type BeforeInstallPromptEvent = Event & {
+  platforms: string[];
+  prompt: () => Promise<void>;
+  userChoice: Promise<PwaInstallChoice>;
+};
+type PwaInstallEnvironment = {
+  isAndroid: boolean;
+  isIos: boolean;
+  isMobile: boolean;
+  isStandalone: boolean;
+};
+
+const GUIDE_STORAGE_KEY = "micaso-prime-guide-dismissed";
 
 const tabs: Array<{ id: TabId; label: string; icon: typeof Home }> = [
   { id: "home", label: "Inicio", icon: Home },
@@ -77,6 +111,165 @@ const tabs: Array<{ id: TabId; label: string; icon: typeof Home }> = [
 ];
 
 const tabIds = new Set<TabId>(["home", "documents", "automation", "utilities", "more"]);
+
+const guideSteps: GuideStep[] = [
+  {
+    action: "Ver mi panel",
+    body: "Aqui miras si todo esta en orden, que fechas requieren atencion y cual es el siguiente paso.",
+    icon: Home,
+    kicker: "Paso 1",
+    tab: "home",
+    tips: ["Revisa el semaforo primero.", "Agrega fechas o casos cuando recibas un aviso."],
+    title: "Empieza por tu estado del dia"
+  },
+  {
+    action: "Abrir documentos",
+    body: "Sube pasaporte, I-94, recibos, permisos o cartas de corte. La idea es que nunca dependas de fotos sueltas.",
+    icon: Folder,
+    kicker: "Paso 2",
+    tab: "documents",
+    tips: ["Sube primero el documento mas importante.", "Usa nombres claros para encontrarlos rapido."],
+    title: "Ordena tus documentos clave"
+  },
+  {
+    action: "Abrir automatizaciones",
+    body: "Responde preguntas simples y genera paquetes PDF para revisar antes de firmar o enviar.",
+    icon: FileCheck2,
+    kicker: "Paso 3",
+    tab: "automation",
+    tips: ["Completa tu perfil antes de generar.", "Revisa cada PDF antes de usarlo."],
+    title: "Prepara formularios guiados"
+  },
+  {
+    action: "Abrir utilidades",
+    body: "Estudia para el DMV, practica preguntas y consulta recursos locales segun tu estado.",
+    icon: Grid2X2,
+    kicker: "Paso 4",
+    tab: "utilities",
+    tips: ["Empieza por la guia de estudio.", "Luego practica con preguntas del simulador."],
+    title: "Aprende y practica por estado"
+  },
+  {
+    action: "Abrir servicios",
+    body: "Cuando algo sea complejo, solicita apoyo humano y manten tu historial organizado dentro del mismo sistema.",
+    icon: MessageCircle,
+    kicker: "Paso 5",
+    tab: "more",
+    tips: ["Usa soporte para dudas complejas.", "La app organiza, no reemplaza asesoria legal."],
+    title: "Pide ayuda cuando la necesites"
+  }
+];
+
+const documentVaultHelp: SectionHelp = {
+  body: "Usa esta pantalla como caja fuerte. Primero guarda los documentos que pueden pedirte en una cita, corte o tramite.",
+  kicker: "Boveda",
+  steps: [
+    "Escribe un nombre simple: Recibo I-765, I-94, Pasaporte o Corte.",
+    "Sube una foto clara o PDF completo.",
+    "Si tienes texto detectado, pegalo para mejorar la clasificacion."
+  ],
+  title: "Que debes guardar aqui"
+};
+
+const automationHelp: SectionHelp = {
+  body: "Cada flujo te hace preguntas y arma un paquete para revisar antes de firmar, enviar o pagar en el portal oficial.",
+  kicker: "Automatiza",
+  steps: [
+    "Elige el tramite que necesitas.",
+    "Llena cada campo con datos iguales a tus documentos.",
+    "Guarda respuestas, genera PDF y revisa todo antes de usarlo."
+  ],
+  title: "Como preparar un formulario"
+};
+
+const utilityHelp: SectionHelp = {
+  body: "Aqui el usuario estudia antes de practicar. La meta es aprender la regla oficial y luego responder como en un simulador.",
+  kicker: "Utilidades",
+  steps: [
+    "Empieza en Estudiar y abre un tema.",
+    "Lee claves, error comun y estrategia de respuesta.",
+    "Despues practica por tema o examen completo."
+  ],
+  title: "Como usar el simulador DMV"
+};
+
+const servicesHelp: SectionHelp = {
+  body: "Estos servicios separan lo automatizable de lo que necesita revision humana, para no prometer asesoria legal automatica.",
+  kicker: "Servicios",
+  steps: [
+    "Activa anualidades para organizar recordatorios y comprobantes.",
+    "Solicita revision experta si el caso es delicado.",
+    "Revisa el seguimiento especial para ver el progreso."
+  ],
+  title: "Cuando pedir apoyo adicional"
+};
+
+function getPwaInstallEnvironment(): PwaInstallEnvironment {
+  if (typeof window === "undefined") {
+    return { isAndroid: false, isIos: false, isMobile: false, isStandalone: false };
+  }
+
+  const userAgent = window.navigator.userAgent;
+  const platform = window.navigator.platform;
+  const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean; userAgentData?: { mobile?: boolean } };
+  const isIos =
+    /iPad|iPhone|iPod/.test(userAgent) ||
+    (platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/i.test(userAgent);
+  const isMobile = Boolean(navigatorWithStandalone.userAgentData?.mobile) || isIos || isAndroid || window.innerWidth <= 768;
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    Boolean(navigatorWithStandalone.standalone);
+
+  return { isAndroid, isIos, isMobile, isStandalone };
+}
+
+function usePwaInstallPrompt() {
+  const [environment, setEnvironment] = useState<PwaInstallEnvironment>(() => getPwaInstallEnvironment());
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installStatus, setInstallStatus] = useState<"idle" | "accepted" | "dismissed" | "installed">("idle");
+
+  useEffect(() => {
+    const refreshEnvironment = () => setEnvironment(getPwaInstallEnvironment());
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+      setInstallStatus("idle");
+    };
+    const handleInstalled = () => {
+      setInstallPrompt(null);
+      setInstallStatus("installed");
+      setEnvironment(getPwaInstallEnvironment());
+    };
+
+    refreshEnvironment();
+    window.addEventListener("resize", refreshEnvironment);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleInstalled);
+
+    return () => {
+      window.removeEventListener("resize", refreshEnvironment);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
+  }, []);
+
+  const requestInstall = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    setInstallStatus(choice.outcome);
+    setInstallPrompt(null);
+  };
+
+  return {
+    canPrompt: Boolean(installPrompt) && !environment.isIos,
+    environment,
+    installStatus,
+    requestInstall
+  };
+}
 
 const stateOptions = [
   ["AL", "Alabama"],
@@ -189,6 +382,10 @@ export function App() {
 function PrimeApp() {
   const appData = useAppData();
   const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
+  const [guideOpen, setGuideOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(GUIDE_STORAGE_KEY) !== "1";
+  });
 
   const currentStatus = useMemo(() => getWorstSeverity(appData.dashboard.alerts), [appData.dashboard.alerts]);
 
@@ -201,6 +398,13 @@ function PrimeApp() {
       url.searchParams.set("tab", tab);
     }
     window.history.replaceState(null, "", url);
+  };
+
+  const closeGuide = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(GUIDE_STORAGE_KEY, "1");
+    }
+    setGuideOpen(false);
   };
 
   const renderScreen = () => {
@@ -290,10 +494,12 @@ function PrimeApp() {
             onAcknowledge={appData.acknowledgeAlert}
             onAddCase={appData.addCase}
             onAddCriticalDate={appData.addCriticalDate}
+            onOpenTab={handleTabChange}
             onRefreshCaseStatus={appData.refreshCaseStatus}
             status={currentStatus}
             summary={appData.dashboard}
             workflowBusy={appData.workflowBusy}
+            documentCount={appData.documents.length}
           />
         );
     }
@@ -302,9 +508,17 @@ function PrimeApp() {
   return (
     <div className="app-frame">
       <div className="phone-shell">
-        <AppHeader dataMode={appData.mode} email={appData.user?.email ?? null} onSignOut={appData.signOut} />
+        <AppHeader
+          dataMode={appData.mode}
+          email={appData.user?.email ?? null}
+          onOpenGuide={() => setGuideOpen(true)}
+          onSignOut={appData.signOut}
+        />
         <div className="screen-content">{renderScreen()}</div>
         <BottomNav activeTab={activeTab} onChange={handleTabChange} />
+        {guideOpen && appData.mode !== "auth_required" && !appData.needsOnboarding ? (
+          <GuideModal activeTab={activeTab} onClose={closeGuide} onGoToTab={handleTabChange} />
+        ) : null}
       </div>
       <aside className="desktop-brief" aria-label="Resumen operativo">
         <div className="brief-panel">
@@ -329,16 +543,18 @@ function PrimeApp() {
 function AppHeader({
   dataMode,
   email,
+  onOpenGuide,
   onSignOut
 }: {
   dataMode: DataMode;
   email: string | null;
+  onOpenGuide: () => void;
   onSignOut: () => Promise<void>;
 }) {
   return (
     <header className="app-header">
-      <button className="icon-button" aria-label="Perfil">
-        <UserRound size={18} />
+      <button className="icon-button" aria-label="Abrir guia" onClick={onOpenGuide} type="button">
+        <Sparkles size={18} />
       </button>
       <div className="brand-lockup">
         <span className="brand-mark product-brand-mark">
@@ -371,9 +587,11 @@ function Dashboard({
   loading,
   error,
   message,
+  documentCount,
   onAcknowledge,
   onAddCase,
   onAddCriticalDate,
+  onOpenTab,
   onRefreshCaseStatus,
   workflowBusy
 }: {
@@ -385,9 +603,11 @@ function Dashboard({
   loading: boolean;
   error: string | null;
   message: string | null;
+  documentCount: number;
   onAcknowledge: (id: string) => void;
   onAddCase: (input: AddCaseInput) => Promise<void>;
   onAddCriticalDate: (input: AddCriticalDateInput) => Promise<void>;
+  onOpenTab: (tab: TabId) => void;
   onRefreshCaseStatus: (caseId: string) => Promise<void>;
   workflowBusy: boolean;
 }) {
@@ -395,6 +615,7 @@ function Dashboard({
     <main className="screen-stack">
       <DataModeBanner error={error} loading={loading} mode={dataMode} />
       {message ? <p className="form-success">{message}</p> : null}
+      <PwaInstallCard />
 
       <section className={`status-panel status-${status}`} aria-label="Semaforo de estatus">
         <div className="traffic-light" aria-hidden="true">
@@ -411,6 +632,8 @@ function Dashboard({
           </button>
         </div>
       </section>
+
+      <SetupChecklist alerts={alerts} cases={cases} documentCount={documentCount} onOpenTab={onOpenTab} />
 
       <DashboardActionPanel
         onAddCase={onAddCase}
@@ -466,6 +689,176 @@ function Dashboard({
 
       <p className="legal-note">MiCaso Prime no es un bufete de abogados y no brinda asesoria legal.</p>
     </main>
+  );
+}
+
+function SetupChecklist({
+  alerts,
+  cases,
+  documentCount,
+  onOpenTab
+}: {
+  alerts: CriticalAlert[];
+  cases: CaseSummary[];
+  documentCount: number;
+  onOpenTab: (tab: TabId) => void;
+}) {
+  const steps: Array<{ done: boolean; label: string; detail: string; tab: TabId; icon: typeof Home }> = [
+    {
+      detail: "Tu panel ya esta creado y listo para organizar informacion.",
+      done: true,
+      icon: ShieldCheck,
+      label: "Perfil base",
+      tab: "home"
+    },
+    {
+      detail: "Agrega un recibo USCIS o una fecha importante.",
+      done: cases.length > 0 || alerts.length > 0,
+      icon: CalendarDays,
+      label: "Caso o fecha critica",
+      tab: "home"
+    },
+    {
+      detail: "Sube I-94, recibos, permisos o notificaciones.",
+      done: documentCount > 0,
+      icon: Folder,
+      label: "Primer documento",
+      tab: "documents"
+    },
+    {
+      detail: "Explora AR-11, I-765, cambio de sede o anualidades.",
+      done: false,
+      icon: FileCheck2,
+      label: "Formulario guiado",
+      tab: "automation"
+    }
+  ];
+  const completed = steps.filter((step) => step.done).length;
+  const nextStep = steps.find((step) => !step.done) ?? steps[steps.length - 1]!;
+  const progress = Math.round((completed / steps.length) * 100);
+
+  return (
+    <section className="setup-card" aria-label="Configuracion guiada">
+      <div className="setup-heading">
+        <div>
+          <span>Modo guia</span>
+          <h2>Configura tu cuenta paso a paso</h2>
+        </div>
+        <strong>{progress}%</strong>
+      </div>
+      <div className="setup-progress" aria-hidden="true">
+        <i style={{ width: `${progress}%` }} />
+      </div>
+      <div className="setup-list">
+        {steps.map((step) => {
+          const Icon = step.icon;
+          return (
+            <button
+              className={`setup-step ${step.done ? "done" : ""}`}
+              key={step.label}
+              onClick={() => onOpenTab(step.tab)}
+              type="button"
+            >
+              <span className="setup-step-icon">{step.done ? <CheckSquare size={17} /> : <Icon size={17} />}</span>
+              <span>
+                <strong>{step.label}</strong>
+                <small>{step.detail}</small>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <button className="setup-cta" onClick={() => onOpenTab(nextStep.tab)} type="button">
+        Continuar: {nextStep.label}
+        <ChevronRight size={16} />
+      </button>
+    </section>
+  );
+}
+
+function GuideModal({
+  activeTab,
+  onClose,
+  onGoToTab
+}: {
+  activeTab: TabId;
+  onClose: () => void;
+  onGoToTab: (tab: TabId) => void;
+}) {
+  const initialStep = Math.max(
+    0,
+    guideSteps.findIndex((step) => step.tab === activeTab)
+  );
+  const [stepIndex, setStepIndex] = useState(initialStep);
+  const step = guideSteps[stepIndex] ?? guideSteps[0]!;
+  const Icon = step.icon;
+  const progress = Math.round(((stepIndex + 1) / guideSteps.length) * 100);
+  const isLastStep = stepIndex === guideSteps.length - 1;
+
+  const goToStepTab = () => {
+    onGoToTab(step.tab);
+    onClose();
+  };
+
+  return (
+    <div className="guide-overlay" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <section className="guide-modal">
+        <div className="guide-topline">
+          <span>{step.kicker}</span>
+          <button onClick={onClose} type="button">Omitir guia</button>
+        </div>
+        <div className="guide-progress" aria-hidden="true">
+          <i style={{ width: `${progress}%` }} />
+        </div>
+        <div className="guide-hero">
+          <div className="guide-icon">
+            <Icon size={28} />
+          </div>
+          <div>
+            <h2 id="guide-title">{step.title}</h2>
+            <p>{step.body}</p>
+          </div>
+        </div>
+        <ul className="guide-tips">
+          {step.tips.map((tip) => (
+            <li key={tip}>
+              <CheckSquare size={15} />
+              <span>{tip}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="guide-dots" aria-label="Progreso de guia">
+          {guideSteps.map((item, index) => (
+            <button
+              aria-label={`Abrir ${item.title}`}
+              className={index === stepIndex ? "active" : ""}
+              key={item.title}
+              onClick={() => setStepIndex(index)}
+              type="button"
+            />
+          ))}
+        </div>
+        <div className="guide-actions">
+          <button className="secondary-button guide-secondary" onClick={goToStepTab} type="button">
+            {step.action}
+          </button>
+          <button
+            className="primary-button guide-primary"
+            onClick={() => {
+              if (isLastStep) {
+                onClose();
+                return;
+              }
+              setStepIndex((current) => current + 1);
+            }}
+            type="button"
+          >
+            {isLastStep ? "Terminar guia" : "Siguiente paso"}
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -858,6 +1251,8 @@ function AuthScreen({
           </span>
         </div>
 
+        <PwaInstallCard variant="auth" />
+
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -963,6 +1358,76 @@ function DataModeBanner({ mode, loading, error }: { mode: DataMode; loading: boo
   );
 }
 
+function PwaInstallCard({ variant = "default" }: { variant?: "auth" | "default" }) {
+  const { canPrompt, environment, installStatus, requestInstall } = usePwaInstallPrompt();
+  const [showSteps, setShowSteps] = useState(false);
+
+  useEffect(() => {
+    if (canPrompt && !environment.isIos) {
+      setShowSteps(false);
+      return;
+    }
+    if (environment.isIos || (!canPrompt && !environment.isAndroid)) {
+      setShowSteps(true);
+    }
+  }, [canPrompt, environment.isAndroid, environment.isIos]);
+
+  if (environment.isStandalone || (!environment.isMobile && !canPrompt)) {
+    return null;
+  }
+
+  const platformLabel = environment.isIos ? "iPhone" : environment.isAndroid ? "Android" : "este dispositivo";
+  const shouldShowSteps = showSteps;
+  const steps = environment.isIos
+    ? [
+        "Abre esta pagina en Safari si no ves la opcion.",
+        "Toca el boton Compartir.",
+        "Elige Agregar a pantalla de inicio y confirma MiCaso Prime."
+      ]
+    : [
+        "Toca el menu del navegador.",
+        "Elige Instalar app o Agregar a pantalla principal.",
+        "Confirma MiCaso Prime para abrirlo como aplicacion."
+      ];
+
+  return (
+    <section className={`pwa-install-card ${variant}`} aria-label="Instalar MiCaso Prime">
+      <div className="pwa-install-top">
+        <span className="pwa-install-icon">
+          {environment.isIos ? <Share2 size={20} /> : <Download size={20} />}
+        </span>
+        <div>
+          <strong>Instala MiCaso Prime en {platformLabel}</strong>
+          <p>Abre la app desde tu pantalla principal, con menos distracciones y acceso rapido.</p>
+        </div>
+      </div>
+      {shouldShowSteps ? (
+        <ol className="pwa-install-steps">
+          {steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      ) : null}
+      <div className="pwa-install-actions">
+        {canPrompt ? (
+          <button className="primary-button pwa-install-primary" onClick={() => void requestInstall()} type="button">
+            <Download size={16} />
+            Instalar ahora
+          </button>
+        ) : (
+          <button className="primary-button pwa-install-primary" onClick={() => setShowSteps((current) => !current)} type="button">
+            <Smartphone size={16} />
+            {shouldShowSteps ? "Ocultar pasos" : "Ver pasos"}
+          </button>
+        )}
+        {installStatus === "dismissed" ? <span>Tambien puedes instalarlo desde el menu del navegador.</span> : null}
+        {installStatus === "accepted" ? <span>Instalacion aceptada. Revisa tu pantalla principal.</span> : null}
+        {installStatus === "installed" ? <span>App instalada correctamente.</span> : null}
+      </div>
+    </section>
+  );
+}
+
 function DocumentVault({
   documents,
   folders,
@@ -988,7 +1453,7 @@ function DocumentVault({
 
   return (
     <main className="screen-stack light-screen">
-      <TopBar title="Mis documentos" />
+      <TopBar guide={documentVaultHelp} title="Mis documentos" />
       <section className="vault-banner">
         <ShieldCheck size={30} />
         <div>
@@ -1155,7 +1620,7 @@ function AutomationCenter({
 }) {
   return (
     <main className="screen-stack light-screen">
-      <TopBar title="Automatizaciones" />
+      <TopBar guide={automationHelp} title="Automatizaciones" />
       <p className="screen-subtitle">Prepara, revisa y exporta tus formularios.</p>
       <section className="annuality-brief" aria-label="Pago de anualidades">
         <CreditCard size={24} />
@@ -1891,7 +2356,7 @@ function UtilityHub({
 
   return (
     <main className="screen-stack light-screen">
-      <TopBar title="Utilidades" />
+      <TopBar guide={utilityHelp} title="Utilidades" />
       <p className="screen-subtitle">Herramientas y recursos para tu camino.</p>
       <section className="dmv-card">
         <div className="steering-wheel">
@@ -2174,7 +2639,7 @@ function MorePanel({
 
   return (
     <main className="screen-stack light-screen">
-      <TopBar title="Servicios premium" />
+      <TopBar guide={servicesHelp} title="Servicios premium" />
       <section className="premium-panel">
         <Sparkles size={30} />
         <h1>Servicios de prueba</h1>
@@ -2187,6 +2652,7 @@ function MorePanel({
           Solicitar revision <MessageCircle size={16} />
         </button>
       </section>
+      <PwaInstallCard />
       {message ? <p className="form-success">{message}</p> : null}
 
       <section className="section-block">
@@ -2270,18 +2736,58 @@ function BottomNav({ activeTab, onChange }: { activeTab: TabId; onChange: (tab: 
   );
 }
 
-function TopBar({ title }: { title: string }) {
+function TopBar({ guide, title }: { guide?: SectionHelp; title: string }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+
   return (
-    <div className="top-bar">
-      <h1>{title}</h1>
-      <div>
-        <button className="icon-button light" aria-label="Buscar">
-          <Search size={18} />
-        </button>
-        <button className="icon-button light" aria-label="Menu">
-          <Menu size={18} />
-        </button>
+    <>
+      <div className="top-bar">
+        <h1>{title}</h1>
+        <div>
+          <button className="icon-button light" aria-label="Buscar" type="button">
+            <Search size={18} />
+          </button>
+          <button
+            className="icon-button light"
+            aria-label={guide ? "Ayuda de esta pantalla" : "Menu"}
+            onClick={guide ? () => setHelpOpen(true) : undefined}
+            type="button"
+          >
+            {guide ? <Sparkles size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
       </div>
+      {guide && helpOpen ? <SectionHelpModal guide={guide} onClose={() => setHelpOpen(false)} /> : null}
+    </>
+  );
+}
+
+function SectionHelpModal({ guide, onClose }: { guide: SectionHelp; onClose: () => void }) {
+  return (
+    <div className="section-help-overlay" role="dialog" aria-modal="true" aria-labelledby="section-help-title">
+      <section className="section-help-modal">
+        <div className="section-help-top">
+          <span>{guide.kicker}</span>
+          <button onClick={onClose} type="button">Cerrar</button>
+        </div>
+        <div className="section-help-hero">
+          <div className="section-help-icon">
+            <Sparkles size={24} />
+          </div>
+          <div>
+            <h2 id="section-help-title">{guide.title}</h2>
+            <p>{guide.body}</p>
+          </div>
+        </div>
+        <ol className="section-help-steps">
+          {guide.steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+        <button className="primary-button section-help-action" onClick={onClose} type="button">
+          Entendido
+        </button>
+      </section>
     </div>
   );
 }
