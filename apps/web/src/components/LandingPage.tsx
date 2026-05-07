@@ -16,7 +16,6 @@ import {
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import heroKeyframe from "../assets/landing/micaso-hero-keyframe.png";
-import micasoPrimeLogo from "../assets/landing/micaso-prime-logo.png";
 import heroVideoDesktop from "../assets/landing/hero-video-desktop.mp4";
 import heroVideoMobile from "../assets/landing/hero-video-mobile.mp4";
 import alertsTrackerKeyframe from "../assets/landing/video-keyframes/alerts-tracker-1x1.png";
@@ -38,10 +37,14 @@ import "../styles/landing.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const PRODUCT_NAME = "DIY Legal";
+const PRODUCT_SHORT_NAME = "DIY Legal";
+const PRODUCT_ICON_SRC = "/icons/diy-legal-icon.svg";
+
 const painPoints = [
   "Fotos de documentos en lugares distintos",
   "Fechas de corte y permisos en la memoria",
-  "Formularios difíciles de preparar sin orden",
+  "Formularios dificiles de preparar sin orden",
   "DMV y recursos que cambian por estado"
 ];
 
@@ -65,7 +68,7 @@ const scrollChapters = [
     kicker: "03 / Formularios",
     stat: "PDF listo para revisar",
     title: "Prepara paquetes guiados.",
-    copy: "Tu perfil alimenta flujos para AR-11, I-765, cambio de sede y anualidades. Tu revisas antes de firmar o enviar."
+    copy: "Tu perfil alimenta flujos para AR-11, I-765, cambio de sede y anualidades. Revisas todo antes de firmar o enviar."
   },
   {
     icon: WalletCards,
@@ -100,7 +103,7 @@ const serviceSections = [
   {
     accent: "orange",
     detail:
-      "Convierte datos del perfil en paquetes guiados para revisar, firmar y enviar. La app prepara y organiza; no reemplaza asesoria legal.",
+      "Convierte datos del perfil en paquetes guiados para revisar, firmar y enviar. Es un GPS de preparacion documental, no asesoria legal automatica.",
     image: automationKeyframe,
     kicker: "Automatizacion guiada",
     points: ["AR-11", "I-765", "Cambio de sede", "Anualidades"],
@@ -120,7 +123,7 @@ const serviceSections = [
   {
     accent: "support",
     detail:
-      "Cuando el caso requiere criterio humano, solicita acompañamiento para asilo, SIJS, apelaciones o casos especiales sin perder tu historial.",
+      "Cuando el caso requiere criterio humano, solicita acompanamiento para asilo, SIJS, apelaciones o casos especiales sin perder tu historial.",
     image: supportKeyframe,
     kicker: "Soporte experto",
     points: ["Casos especiales", "Historial organizado", "Dashboard de progreso"],
@@ -131,10 +134,10 @@ const serviceSections = [
 
 const pricingItems = [
   "Boveda segura de documentos",
-  "Alertas criticas y semaforo",
-  "Formularios guiados y PDF",
+  "GPS de pasos y alertas",
+  "Formularios dinamicos y PDF",
   "DMV, estudio y recursos",
-  "Soporte experto bajo solicitud"
+  "Revision humana bajo solicitud"
 ];
 
 function useHeroVideoSource() {
@@ -290,13 +293,12 @@ export function LandingPage() {
   return (
     <div className="lp-page" ref={landingRef}>
       <header className="lp-nav">
-        <a className="lp-brand" href="#inicio" aria-label="MiCaso Prime inicio">
+        <a className="lp-brand" href="#inicio" aria-label={`${PRODUCT_NAME} inicio`}>
           <span className="lp-brand-mark" aria-hidden="true">
-            <img alt="" src={micasoPrimeLogo} />
+            <img alt="" src={PRODUCT_ICON_SRC} />
           </span>
           <span>
-            <strong>MiCaso Prime</strong>
-            <small>by UsaLatino Prime</small>
+            <strong>{PRODUCT_NAME}</strong>
           </span>
         </a>
         <nav aria-label="Landing">
@@ -306,17 +308,17 @@ export function LandingPage() {
           <a href="#precio">Precio</a>
         </nav>
         <a className="lp-nav-cta" href="/">
-          Abrir MiCaso <ChevronRight size={16} />
+          Abrir app <ChevronRight size={16} />
         </a>
       </header>
 
       <main>
         <section className="lp-hero" id="inicio">
           <div className="lp-hero-copy">
-            <span className="lp-product-line">MiCaso Prime | $14/mes</span>
-            <h1>Centro de control migratorio en tu bolsillo.</h1>
+            <span className="lp-product-line">{PRODUCT_NAME} | $14/mes</span>
+            <h1>Hazlo tu mismo. Hazlo guiado. Hazlo bien.</h1>
             <p>
-              Documentos, fechas, formularios y DMV en una vista clara para saber que sigue.
+              Un set de herramientas para preparar tramites, documentos, fechas y recursos sin perderte en la burocracia.
             </p>
             <div className="lp-hero-actions">
               <a className="lp-primary" href="/">
@@ -332,7 +334,7 @@ export function LandingPage() {
               <span><MessageCircle size={16} /> Soporte humano</span>
             </div>
           </div>
-          <div className="lp-hero-cinema" aria-label="Video principal de MiCaso Prime">
+          <div className="lp-hero-cinema" aria-label={`Video principal de ${PRODUCT_NAME}`}>
             <video
               key={heroVideoSource}
               className="lp-hero-keyframe"
@@ -342,13 +344,13 @@ export function LandingPage() {
               playsInline
               poster={heroKeyframe}
               preload="auto"
-              aria-label="Video cinematografico de MiCaso Prime"
+              aria-label={`Video cinematografico de ${PRODUCT_NAME}`}
             >
               <source src={heroVideoSource} type="video/mp4" />
             </video>
             <div className="lp-video-meta">
               <span>Centro de control</span>
-              <strong>Boveda · Alertas · Formularios</strong>
+              <strong>Boveda | Alertas | Formularios</strong>
             </div>
             <div className="lp-hero-floating-status status-main" aria-hidden="true">
               <span>Hoy</span>
@@ -366,7 +368,7 @@ export function LandingPage() {
             <h2>El problema no es solo el tramite. Es el desorden.</h2>
             <p>
               Fotos sueltas, correos, recibos, permisos, fechas de corte y formularios viven en lugares distintos.
-              MiCaso Prime convierte ese caos en un sistema claro.
+              {PRODUCT_NAME} convierte ese caos en un sistema guiado.
             </p>
           </div>
           <div className="lp-chaos-board lp-reveal" aria-label="Documentos dispersos antes de organizarse">
@@ -378,7 +380,7 @@ export function LandingPage() {
             ))}
             <div className="lp-order-core">
               <FolderLock size={24} />
-              <strong>MiCaso Prime</strong>
+              <strong>{PRODUCT_SHORT_NAME}</strong>
               <span>Orden migratorio</span>
             </div>
           </div>
@@ -386,9 +388,9 @@ export function LandingPage() {
 
         <section className="lp-scroll-showcase lp-command-section" id="producto">
           <div className="lp-command-visual lp-reveal">
-            <div className="lp-sticky-media lp-command-media" aria-label="Centro visual de control MiCaso Prime">
+            <div className="lp-sticky-media lp-command-media" aria-label={`Centro visual de control ${PRODUCT_NAME}`}>
               <video
-                aria-label="Centro de control MiCaso Prime"
+                aria-label={`GPS de control ${PRODUCT_NAME}`}
                 autoPlay
                 className="lp-stage-video"
                 loop
@@ -424,8 +426,8 @@ export function LandingPage() {
             </div>
           </div>
           <div className="lp-scroll-copy lp-command-copy lp-reveal">
-            <span className="lp-kicker lime">Centro de control</span>
-            <h2 className="lp-deck-title">Un tablero vivo para saber que sigue.</h2>
+            <span className="lp-kicker lime">GPS legal guiado</span>
+            <h2 className="lp-deck-title">Un tablero vivo que te dice que sigue.</h2>
             <p className="lp-command-lede">
               Sin leer carpetas eternas: ves estatus, documentos, fechas y acciones en segundos.
             </p>
@@ -461,7 +463,7 @@ export function LandingPage() {
                 </div>
               </div>
               <MediaObject
-                alt={`${service.kicker} en MiCaso Prime`}
+                alt={`${service.kicker} en ${PRODUCT_NAME}`}
                 className={`lp-reveal ${service.accent}`}
                 image={service.image}
                 label={service.kicker}
@@ -475,7 +477,7 @@ export function LandingPage() {
         <section className="lp-price-section" id="precio">
           <div className="lp-price-copy lp-reveal">
             <span className="lp-kicker lime">Membresia mensual</span>
-            <h2>Todo tu proceso en orden por $14 al mes.</h2>
+            <h2>Hazlo tu mismo por $14 al mes.</h2>
             <p>
               Una membresia para organizar documentos, recibir alertas, preparar formularios guiados, estudiar DMV y
               acceder a recursos clave.
@@ -483,7 +485,7 @@ export function LandingPage() {
           </div>
           <div className="lp-price-card lp-reveal">
             <div>
-              <span>MiCaso Prime</span>
+              <span>{PRODUCT_NAME}</span>
               <strong>$14<small>/mes</small></strong>
             </div>
             <ul>
@@ -494,7 +496,7 @@ export function LandingPage() {
             <a className="lp-primary" href="/">
               Empezar ahora por $14 <ChevronRight size={18} />
             </a>
-            <p>La app organiza y prepara. No reemplaza asesoria legal.</p>
+            <p>La app organiza y prepara documentos. No reemplaza asesoria legal.</p>
           </div>
         </section>
 
@@ -503,7 +505,7 @@ export function LandingPage() {
             <span className="lp-kicker blue">Confianza responsable</span>
             <h2>Tecnologia clara. Fuentes oficiales. Soporte humano.</h2>
             <p>
-              MiCaso Prime organiza informacion, versiones y proximos pasos para que tengas control antes de revisar,
+              {PRODUCT_NAME} organiza informacion, versiones y proximos pasos para que tengas control antes de revisar,
               firmar o pedir ayuda profesional.
             </p>
             <strong>No somos una agencia gubernamental.</strong>
@@ -535,14 +537,14 @@ export function LandingPage() {
         <section className="lp-final-cta">
           <div className="lp-final-copy lp-reveal">
             <span className="lp-kicker orange">Empieza hoy</span>
-            <h2>Empieza ordenando tu proceso hoy.</h2>
+            <h2>Tu tramite, en tus manos.</h2>
             <p>
-              Por $14 al mes, MiCaso Prime te ayuda a mantener documentos, fechas, formularios, DMV y recursos en un
+              Por $14 al mes, {PRODUCT_NAME} te ayuda a mantener documentos, fechas, formularios, DMV y recursos en un
               solo centro de control.
             </p>
             <div className="lp-hero-actions">
               <a className="lp-primary" href="/">
-                Activar MiCaso Prime <ChevronRight size={18} />
+                Activar {PRODUCT_SHORT_NAME} <ChevronRight size={18} />
               </a>
               <a className="lp-secondary dark" href="#servicios">
                 Ver servicios incluidos
@@ -551,7 +553,7 @@ export function LandingPage() {
           </div>
           <div className="lp-final-visual lp-reveal">
             <video
-              aria-label="Constelacion final de servicios MiCaso Prime"
+              aria-label={`Constelacion final de servicios ${PRODUCT_NAME}`}
               autoPlay
               className="lp-stage-video"
               key={finalVideoSource}

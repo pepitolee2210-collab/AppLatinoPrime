@@ -1,7 +1,7 @@
 /* global URL */
 
-const CACHE_NAME = "usa-latino-prime-shell-v2";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon.svg"];
+const CACHE_NAME = "diy-legal-shell-v1";
+const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/diy-legal-logo.png", "/icons/diy-legal-icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));

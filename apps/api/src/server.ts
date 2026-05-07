@@ -42,5 +42,5 @@ app.use((error: unknown, _req: express.Request, res: express.Response, next: exp
 });
 
 app.listen(config.PORT, () => {
-  console.log(`MiCaso Prime API listening on http://localhost:${config.PORT}`);
+  console.log(`DIY Legal API listening on http://localhost:${config.PORT}`);
 });

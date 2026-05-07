@@ -46,7 +46,6 @@ import type {
   StatusSeverity,
   VaultDocument
 } from "@usa-latino-prime/shared";
-import micasoPrimeLogo from "./assets/landing/micaso-prime-logo.png";
 import { resourceRows } from "./data/demo";
 import {
   useAppData,
@@ -66,6 +65,10 @@ import {
 } from "./hooks/useAppData";
 
 const LandingPage = lazy(() => import("./components/LandingPage").then((module) => ({ default: module.LandingPage })));
+
+const PRODUCT_NAME = "DIY Legal";
+const PRODUCT_TAGLINE = "Hazlo tu mismo. Hazlo bien.";
+const PRODUCT_ICON_SRC = "/icons/diy-legal-icon.svg";
 
 type TabId = "home" | "documents" | "automation" | "utilities" | "more";
 type DataMode = "preview" | "auth_required" | "live";
@@ -100,7 +103,7 @@ type PwaInstallEnvironment = {
   isStandalone: boolean;
 };
 
-const GUIDE_STORAGE_KEY = "micaso-prime-guide-dismissed";
+const GUIDE_STORAGE_KEY = "diy-legal-guide-dismissed";
 
 const tabs: Array<{ id: TabId; label: string; icon: typeof Home }> = [
   { id: "home", label: "Inicio", icon: Home },
@@ -370,7 +373,7 @@ function formCodeForFlow(flow: AutomationFlow): string {
 export function App() {
   if (shouldShowLanding()) {
     return (
-      <Suspense fallback={<div className="landing-loading">Cargando MiCaso Prime...</div>}>
+      <Suspense fallback={<div className="landing-loading">Cargando {PRODUCT_NAME}...</div>}>
         <LandingPage />
       </Suspense>
     );
@@ -523,7 +526,7 @@ function PrimeApp() {
       <aside className="desktop-brief" aria-label="Resumen operativo">
         <div className="brief-panel">
           <p className="brief-kicker">Fundacion productiva</p>
-          <h2>Control migratorio, documentos y tramites conectado a Supabase.</h2>
+          <h2>{PRODUCT_NAME} conectado a Supabase para documentos, alertas y tramites guiados.</h2>
           <p>
             Esta etapa ya usa Auth, RLS, storage privado y catalogo oficial versionado para escalar hacia
             automatizaciones, alertas push y revision humana de prueba.
@@ -558,11 +561,10 @@ function AppHeader({
       </button>
       <div className="brand-lockup">
         <span className="brand-mark product-brand-mark">
-          <img alt="" src={micasoPrimeLogo} />
+          <img alt="" src={PRODUCT_ICON_SRC} />
         </span>
         <div>
-          <strong>MiCaso</strong>
-          <small>Prime</small>
+          <strong>DIY Legal</strong>
         </div>
       </div>
       <button
@@ -687,7 +689,7 @@ function Dashboard({
         <span>Tus datos estan cifrados y protegidos.</span>
       </div>
 
-      <p className="legal-note">MiCaso Prime no es un bufete de abogados y no brinda asesoria legal.</p>
+      <p className="legal-note">{PRODUCT_NAME} no es un bufete de abogados y no brinda asesoria legal.</p>
     </main>
   );
 }
@@ -1221,9 +1223,9 @@ function AuthScreen({
             <ShieldCheck size={34} />
           </div>
           <div>
-            <span>Centro de Control Migratorio</span>
-            <h1>{authMode === "signup" ? "Crea tu cuenta segura" : "Entra a tu cuenta"}</h1>
-            <p>Usa tu correo y contrasena. Sin enlaces de confirmacion.</p>
+            <span>DIY Legal guiado</span>
+            <h1>{authMode === "signup" ? "Crea tu acceso seguro" : "Entra a tu cuenta"}</h1>
+            <p>{PRODUCT_TAGLINE} Sin enlaces de confirmacion.</p>
           </div>
         </div>
 
@@ -1382,22 +1384,22 @@ function PwaInstallCard({ variant = "default" }: { variant?: "auth" | "default" 
     ? [
         "Abre esta pagina en Safari si no ves la opcion.",
         "Toca el boton Compartir.",
-        "Elige Agregar a pantalla de inicio y confirma MiCaso Prime."
+        `Elige Agregar a pantalla de inicio y confirma ${PRODUCT_NAME}.`
       ]
     : [
         "Toca el menu del navegador.",
         "Elige Instalar app o Agregar a pantalla principal.",
-        "Confirma MiCaso Prime para abrirlo como aplicacion."
+        `Confirma ${PRODUCT_NAME} para abrirlo como aplicacion.`
       ];
 
   return (
-    <section className={`pwa-install-card ${variant}`} aria-label="Instalar MiCaso Prime">
+    <section className={`pwa-install-card ${variant}`} aria-label={`Instalar ${PRODUCT_NAME}`}>
       <div className="pwa-install-top">
         <span className="pwa-install-icon">
           {environment.isIos ? <Share2 size={20} /> : <Download size={20} />}
         </span>
         <div>
-          <strong>Instala MiCaso Prime en {platformLabel}</strong>
+          <strong>Instala {PRODUCT_NAME} en {platformLabel}</strong>
           <p>Abre la app desde tu pantalla principal, con menos distracciones y acceso rapido.</p>
         </div>
       </div>
@@ -2642,8 +2644,8 @@ function MorePanel({
       <TopBar guide={servicesHelp} title="Servicios premium" />
       <section className="premium-panel">
         <Sparkles size={30} />
-        <h1>Servicios de prueba</h1>
-        <p>Activa solicitudes gratis mientras validamos el flujo completo antes de implementar pagos.</p>
+        <h1>Servicios DIY Legal</h1>
+        <p>Activa solicitudes gratis mientras validamos el flujo DIY guiado antes de implementar pagos.</p>
         <button
           className="primary-button"
           disabled={workflowBusy}

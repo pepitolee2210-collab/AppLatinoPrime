@@ -1,7 +1,7 @@
 {
-  "name": "MiCaso Prime",
-  "short_name": "MiCaso",
-  "description": "Centro de control migratorio de UsaLatino Prime para documentos, fechas criticas y tramites.",
+  "name": "DIY Legal",
+  "short_name": "DIY Legal",
+  "description": "Herramientas guiadas de UsaLatino Prime para organizar documentos, alertas, tramites y recursos.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#03070d",
@@ -9,7 +9,7 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icons/micaso-prime-logo.png",
+      "src": "/icons/diy-legal-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

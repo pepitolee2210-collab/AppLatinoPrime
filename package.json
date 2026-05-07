@@ -2,7 +2,7 @@
   "name": "usa-latino-prime",
   "version": "0.1.0",
   "private": true,
-  "description": "PWA migration control center for MiCaso Prime by UsaLatino Prime.",
+  "description": "DIY legal PWA by UsaLatino Prime for guided documents, alerts, forms, DMV and resources.",
   "workspaces": [
     "apps/*",
     "packages/*"
